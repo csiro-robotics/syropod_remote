@@ -1,0 +1,36 @@
+[Buildset]
+BuildItems=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x01\x00\x00\x00\x1c\x00h\x00e\x00x\x00a\x00p\x00o\x00d\x00_\x00r\x00e\x00m\x00o\x00t\x00e)
+
+[CMake]
+Build Directory Count=1
+Current Build Directory Index=0
+ProjectRootRelative=./
+
+[CMake][CMake Build Directory 0]
+Build Directory Path=file:///home/ryan/lobsang_ws/build/hexapod_remote
+Build Type=Debug
+CMake Binary=file:///usr/bin/cmake
+Environment Profile=
+Extra Arguments=-DCATKIN_DEVEL_PREFIX=../../devel -DCMAKE_INSTALL_PREFIX=../../install
+Install Directory=
+
+[Launch]
+Launch Configurations=Launch Configuration 0
+
+[Launch][Launch Configuration 0]
+Configured Launch Modes=execute
+Configured Launchers=nativeAppLauncher
+Name=hexapod_remote
+Type=Native Application
+
+[Launch][Launch Configuration 0][Data]
+Arguments=
+Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x02\x00\x00\x00\x1c\x00h\x00e\x00x\x00a\x00p\x00o\x00d\x00_\x00r\x00e\x00m\x00o\x00t\x00e\x00\x00\x00\x1c\x00h\x00e\x00x\x00a\x00p\x00o\x00d\x00_\x00r\x00e\x00m\x00o\x00t\x00e)
+Dependency Action=Build
+EnvironmentGroup=default
+Executable=file:///home/ryan/lobsang_ws/devel/lib/hexapod_remote/hexapod_remote
+External Terminal=konsole --noclose --workdir %workdir -e %exe
+Project Target=hexapod_remote,hexapod_remote
+Use External Terminal=false
+Working Directory=file:///home/ryan/lobsang_ws/src/hexapod_remote/src
+isExecutable=true

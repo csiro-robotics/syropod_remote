@@ -1,0 +1,16 @@
+<launch>
+
+<node pkg="joy" type="joy_node" name="joystick"/>
+
+<node pkg="hexapod_remote" type="hexapod_remote_cpp" name="hexapod_remote" output="screen">
+    <param name="axis_deadman" value="4"/>
+    <param name="axis_linear_x" value="0"/>
+    <param name="axis_linear_y" value="1"/>
+    <param name="axis_linear_z" value="4"/>
+    <param name="axis_angular_x" value="2"/>
+    <param name="axis_angular_y" value="5"/>
+    <param name="axis_angular_z" value="3"/>
+    <param name="velocity_pub_rate" value="30"/>
+</node>
+
+</launch>
