@@ -1,19 +1,14 @@
-Hexapod Remote Node
+Hexapod Remote node
 
 This node takes Joy commands and converts them into unit vectors for desired velocity and relative pose
 
-Topics: 
-
+Topics 
 	/desired_velocity_unit_vector
 	/desired_pose_unit_vector
-	/joystic_commands
 
 Mapping:
 
-	Joy messages
-
 buttons:
-
 	Start		- Start/stop walker toggle
 	A(Green)	- Gait select
 	B(Red)		- 
@@ -21,7 +16,6 @@ buttons:
 	Y(yellow)	- Option 2 Toggle
 
 No buttons depressed:
-
 	Left joystick 
 		up/down		- Foward/Backward
 		Left/Right	- crab Left/Right 	
@@ -31,7 +25,6 @@ No buttons depressed:
 		Left/Right	- Rotate Left/Right
 
 While LB:
-
 	Left joystick 
 		up/down		- Foward/Backward
 		Left/Right	- crab Left/Right 	
@@ -41,7 +34,6 @@ While LB:
 		Left/Right	- Rotate Left/Right
 
 While RB:
-
 	Left joystick 
 		up/down		- Pose Foward/Backward
 		Left/Right	- Pose crab Left/Right 	
