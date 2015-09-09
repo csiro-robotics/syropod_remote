@@ -10,11 +10,50 @@
 
 
 // set up variables 
+geometry_msgs::Twist vel;
+geometry_msgs::Twist pose; 
 
+bool joy_one_flip; 
 
 void JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
-  ROS_INFO("I heard a joystic message");
+   
+  
+  if(joy->buttons[4]==1 && joy->buttons[5]==1)	//check if LB&RB are depressed 
+  {
+    ROS_INFO("Left and right buttons");
+    pose.angular.x = joy->axes[0];
+    pose.angular.y = joy->axes[1];
+    pose.linear.z = joy->axes[4];
+    pose.angular.z = joy->axes[3];
+  }
+  else if(joy->buttons[4]==1)			//if left button pressed 
+  {
+     ROS_INFO("Left button");
+    vel.linear.x = joy->axes[0];
+    vel.linear.y = joy->axes[1];
+    vel.linear.z = joy->axes[4];
+    vel.angular.z = joy->axes[3];
+  }
+  else if(joy->buttons[5]==1)			//if right button pressed 
+  {
+    ROS_INFO("right button");
+    pose.linear.x = joy->axes[0];
+    pose.linear.y = joy->axes[1];
+    pose.linear.z = joy->axes[4];
+    pose.angular.z = joy->axes[3];
+  }
+  else						//Proceed with normal controll
+  {
+    vel.linear.x = joy->axes[0];
+    vel.linear.y = joy->axes[1];
+    vel.angular.z = joy->axes[3];
+    
+  }
+  
+
+  //check button pressed
+  
 }
 
 int main(int argc, char **argv)
@@ -36,16 +75,17 @@ int main(int argc, char **argv)
   //pose publisher
   ros::Publisher pose_pub = n.advertise<geometry_msgs::Twist>("desired_pose",1);
   //status publisher
+
+  // get / set peramiters
   
-  geometry_msgs::Twist vel;
-  geometry_msgs::Twist pose; 
-  
-  
-  
+    if(joy_one_flip)
+    {
+      ROS_INFO("WOO");
+    }
+    
   while(ros::ok())
   {  //do maths
   
-    
     //publish stuff
     velocity_pub.publish(vel);
     pose_pub.publish(pose);
