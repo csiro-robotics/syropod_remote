@@ -13,7 +13,17 @@
 geometry_msgs::Twist vel;
 geometry_msgs::Twist pose; 
 
-bool joy_one_flip; 
+int axis_linear_x;
+int axis_linear_y;
+int axis_linear_z;
+int axis_angular_z;
+ 
+bool axis_linear_x_flip;
+bool axis_linear_y_flip;
+bool axis_linear_z_flip;
+bool axis_angular_z_flip;
+
+int pub_rate;
 
 void JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
@@ -22,32 +32,126 @@ void JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
   if(joy->buttons[4]==1 && joy->buttons[5]==1)	//check if LB&RB are depressed 
   {
     ROS_INFO("Left and right buttons");
-    pose.angular.x = joy->axes[0];
-    pose.angular.y = joy->axes[1];
-    pose.linear.z = joy->axes[4];
-    pose.angular.z = joy->axes[3];
+   if(axis_linear_x_flip == true)
+    {
+      pose.angular.x = joy->axes[axis_linear_x] * -1.0;
+    }else
+    {
+      pose.angular.x = joy->axes[axis_linear_x];
+    }  
+     if(axis_linear_y_flip == true)
+    {
+      pose.angular.y = joy->axes[axis_linear_y] * -1.0;
+    }else
+    {
+      pose.angular.y = joy->axes[axis_linear_y];
+    }  
+      if(axis_linear_z_flip == true)
+    {
+      pose.linear.z = joy->axes[axis_linear_z] * -1.0;
+    }else
+    {
+      pose.linear.z = joy->axes[axis_linear_z];
+    }  
+     if(axis_angular_z_flip == true)
+    {
+      pose.angular.z = joy->axes[axis_angular_z] * -1.0;
+    }else
+    {
+      pose.angular.z = joy->axes[axis_angular_z];
+    }
+    
   }
   else if(joy->buttons[4]==1)			//if left button pressed 
   {
-     ROS_INFO("Left button");
-    vel.linear.x = joy->axes[0];
-    vel.linear.y = joy->axes[1];
-    vel.linear.z = joy->axes[4];
-    vel.angular.z = joy->axes[3];
+    ROS_INFO("Left button");
+     if(axis_linear_x_flip == true)
+    {
+      vel.linear.x = joy->axes[axis_linear_x] * -1.0;
+    }else
+    {
+      vel.linear.x = joy->axes[axis_linear_x];
+    }  
+     if(axis_linear_y_flip == true)
+    {
+      vel.linear.y = joy->axes[axis_linear_y] * -1.0;
+    }else
+    {
+      vel.linear.y = joy->axes[axis_linear_y];
+    }  
+      if(axis_linear_z_flip == true)
+    {
+      vel.linear.z = joy->axes[axis_linear_z] * -1.0;
+    }else
+    {
+      vel.linear.z = joy->axes[axis_linear_z];
+    }  
+     
+     if(axis_angular_z_flip == true)
+    {
+      vel.angular.z = joy->axes[axis_angular_z] * -1.0;
+    }else
+    {
+      vel.angular.z = joy->axes[axis_angular_z];
+    }  
+    
   }
   else if(joy->buttons[5]==1)			//if right button pressed 
   {
     ROS_INFO("right button");
-    pose.linear.x = joy->axes[0];
-    pose.linear.y = joy->axes[1];
-    pose.linear.z = joy->axes[4];
-    pose.angular.z = joy->axes[3];
+    if(axis_linear_x_flip == true)
+    {
+      pose.linear.x = joy->axes[axis_linear_x] * -1.0;
+    }else
+    {
+      pose.linear.x = joy->axes[axis_linear_x];
+    }  
+     if(axis_linear_y_flip == true)
+    {
+      pose.linear.y = joy->axes[axis_linear_y] * -1.0;
+    }else
+    {
+      pose.linear.y = joy->axes[axis_linear_y];
+    }  
+      if(axis_linear_z_flip == true)
+    {
+      pose.linear.z = joy->axes[axis_linear_z] * -1.0;
+    }else
+    {
+      pose.linear.z = joy->axes[axis_linear_z];
+    }  
+     if(axis_angular_z_flip == true)
+    {
+      pose.angular.z = joy->axes[axis_angular_z] * -1.0;
+    }else
+    {
+      pose.angular.z = joy->axes[axis_angular_z];
+    }  
+    
   }
   else						//Proceed with normal controll
   {
-    vel.linear.x = joy->axes[0];
-    vel.linear.y = joy->axes[1];
-    vel.angular.z = joy->axes[3];
+     if(axis_linear_x_flip == true)
+    {
+      vel.linear.x = joy->axes[axis_linear_x] * -1.0;
+    }else
+    {
+      vel.linear.x = joy->axes[axis_linear_x];
+    }  
+     if(axis_linear_y_flip == true)
+    {
+      vel.linear.y = joy->axes[axis_linear_y] * -1.0;
+    }else
+    {
+      vel.linear.y = joy->axes[axis_linear_y];
+    }  
+     if(axis_angular_z_flip == true)
+    {
+      vel.angular.z = joy->axes[axis_angular_z] * -1.0;
+    }else
+    {
+      vel.angular.z = joy->axes[axis_angular_z];
+    }  
     
   }
   
@@ -62,8 +166,22 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "hexapod_remote");
 
   ros::NodeHandle n;
-  //setup publish loop_rate (future perameter)
-    ros::Rate loop_rate(100); 			//peramiterize  
+
+  // get and set peramiter defaults if perameters arn't on the param server  
+  n.param("hexapod_remote/axis_linear_x", axis_linear_x, 0);
+  n.param("hexapod_remote/axis_linear_y", axis_linear_y, 1);
+  n.param("hexapod_remote/axis_linear_z", axis_linear_z, 4);
+  n.param("hexapod_remote/axis_angular_z", axis_angular_z, 3);
+  n.param("hexapod_remote/axis_linear_x_flip", axis_linear_x_flip, false);
+  n.param("hexapod_remote/axis_linear_y_flip", axis_linear_y_flip, false);
+  n.param("hexapod_remote/axis_linear_z_flip", axis_linear_z_flip, false);
+  n.param("hexapod_remote/axis_angular_z_flip", axis_angular_z_flip, false);
+  
+  n.param("hexapod_remote/pub_rate",pub_rate, 50);
+  
+
+  //setup publish loop_rate 
+   ros::Rate loop_rate(pub_rate); 			//peramiterize  
   
   // subscribe to joystic topic
   ros::Subscriber sub = n.subscribe("joy", 1, JoyCallback);
@@ -76,13 +194,7 @@ int main(int argc, char **argv)
   ros::Publisher pose_pub = n.advertise<geometry_msgs::Twist>("desired_pose",1);
   //status publisher
 
-  // get / set peramiters
-  
-    if(joy_one_flip)
-    {
-      ROS_INFO("WOO");
-    }
-    
+
   while(ros::ok())
   {  //do maths
   

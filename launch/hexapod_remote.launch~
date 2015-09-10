@@ -2,7 +2,7 @@
 
 <node pkg="joy" type="joy_node" name="joystick"/>
 
-<node pkg="hexapod_remote" type="hexapod_remote_cpp" name="hexapod_remote" output="screen">
+<node pkg="hexapod_remote" type="hexapod_remote" name="hexapod_remote" output="screen">
     <param name="axis_deadman" value="4"/>
     <param name="axis_linear_x" value="0"/>
     <param name="axis_linear_y" value="1"/>
