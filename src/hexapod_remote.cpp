@@ -1,5 +1,5 @@
 #include "ros/ros.h"
-#include "std_msgs/String.h"
+#include "std_msgs/Bool.h"
 #include "geometry_msgs/Twist.h"
 #include "sensor_msgs/Joy.h"
 
@@ -12,7 +12,7 @@
 // set up variables 
 geometry_msgs::Twist vel;
 geometry_msgs::Twist pose; 
-std_msgs::String start_state ;
+std_msgs::Bool start_state ;
 
 int axis_linear_x;
 int axis_linear_y;
@@ -32,11 +32,11 @@ void JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
   // CHECK FOR START BUTTON PRESS  
   if(joy->buttons[7] ==1) // start button 
   {
-    start_state.data = "start";
+    start_state.data = true;
   }
   if(joy->buttons[6] ==1) // back button
   {
-    start_state.data = "stop";
+    start_state.data = false;
   }
   
   
@@ -204,11 +204,11 @@ int main(int argc, char **argv)
   //pose publisher
   ros::Publisher pose_pub = n.advertise<geometry_msgs::Twist>("desired_pose",1);
   //status publisher
-  ros::Publisher start_state_pub = n.advertise<std_msgs::String>("start_state",1);
+  ros::Publisher start_state_pub = n.advertise<std_msgs::Bool>("start_state",1);
   
   // setup defauly variable values 
   
-  start_state.data = "stop";
+  start_state.data = false;
 
   while(ros::ok())
   {  //do maths
