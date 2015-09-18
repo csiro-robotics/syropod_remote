@@ -1,5 +1,5 @@
 #include "ros/ros.h"
-#include "std_msgs/String.h"
+#include "std_msgs/Bool.h"
 #include "geometry_msgs/Twist.h"
 #include "sensor_msgs/Joy.h"
 
@@ -12,6 +12,7 @@
 // set up variables 
 geometry_msgs::Twist vel;
 geometry_msgs::Twist pose; 
+std_msgs::Bool start_state;
 
 int axis_linear_x;
 int axis_linear_y;
@@ -153,10 +154,10 @@ int main(int argc, char **argv)
   //pose publisher
   ros::Publisher pose_pub = n.advertise<geometry_msgs::Twist>("desired_pose",1);
   //status publisheri
-  ros::Publisher start_state_pub = n.advertise<std::Bool>("start_state", 1);
+  ros::Publisher start_state_pub = n.advertise<std_msgs::Bool>("start_state", 1);
 
   //setup default variable values
-  start_state.data = false
+  start_state.data = false;
 
   while(ros::ok())
   {  //do maths
