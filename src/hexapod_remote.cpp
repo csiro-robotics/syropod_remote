@@ -12,12 +12,14 @@
 // set up variables 
 geometry_msgs::Twist vel;
 geometry_msgs::Twist pose; 
+std_msgs::String start_state ;
 
 int axis_linear_x;
 int axis_linear_y;
 int axis_linear_z;
 int axis_angular_z;
- 
+
+
 bool axis_linear_x_flip;
 bool axis_linear_y_flip;
 bool axis_linear_z_flip;
@@ -27,7 +29,16 @@ int pub_rate;
 
 void JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
-   
+  // CHECK FOR START BUTTON PRESS  
+  if(joy->buttons[7] ==1) // start button 
+  {
+    start_state.data = "start";
+  }
+  if(joy->buttons[6] ==1) // back button
+  {
+    start_state.data = "stop";
+  }
+  
   
   if(joy->buttons[4]==1 && joy->buttons[5]==1)	//check if LB&RB are depressed 
   {
@@ -179,7 +190,7 @@ int main(int argc, char **argv)
   
   n.param("hexapod_remote/pub_rate",pub_rate, 50);
   
-
+  
   //setup publish loop_rate 
    ros::Rate loop_rate(pub_rate); 			//peramiterize  
   
@@ -193,7 +204,11 @@ int main(int argc, char **argv)
   //pose publisher
   ros::Publisher pose_pub = n.advertise<geometry_msgs::Twist>("desired_pose",1);
   //status publisher
-
+  ros::Publisher start_state_pub = n.advertise<std_msgs::String>("start_state",1);
+  
+  // setup defauly variable values 
+  
+  start_state.data = "stop";
 
   while(ros::ok())
   {  //do maths
@@ -201,6 +216,7 @@ int main(int argc, char **argv)
     //publish stuff
     velocity_pub.publish(vel);
     pose_pub.publish(pose);
+    start_state_pub.publish(start_state);
     ros::spinOnce();
     loop_rate.sleep();
   }
