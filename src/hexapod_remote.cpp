@@ -30,7 +30,19 @@ bool axis_angular_z_flip;
 int pub_rate;
 
 void JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
-{    
+{
+  //CHECK FOR START BUTTON PRESS
+  if (joy->buttons[7] == 1) //Start button
+  {
+    start_state.data = true;
+  }
+  
+  if (joy->buttons[6] == 1) //Back button
+  {
+    start_state.data = false;
+  }	
+
+ // CHECK CONTROL MODE   
   if(joy->buttons[4]==1 && joy->buttons[5]==1)	//check if LB&RB are depressed 
   {
     ROS_INFO("Left and right buttons");
@@ -140,8 +152,11 @@ int main(int argc, char **argv)
   ros::Publisher velocity_pub = n.advertise<geometry_msgs::Twist>("desired_velocity",1);
   //pose publisher
   ros::Publisher pose_pub = n.advertise<geometry_msgs::Twist>("desired_pose",1);
-  //status publisher
+  //status publisheri
+  ros::Publisher start_state_pub = n.advertise<std::Bool>("start_state", 1);
 
+  //setup default variable values
+  start_state.data = false
 
   while(ros::ok())
   {  //do maths
@@ -149,6 +164,7 @@ int main(int argc, char **argv)
     //publish stuff
     velocity_pub.publish(vel);
     pose_pub.publish(pose);
+    start_state_pub.publish(start_state);
     ros::spinOnce();
     loop_rate.sleep();
   }
