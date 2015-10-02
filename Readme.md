@@ -41,8 +41,8 @@ This is subject to change throughout development.
 
 Buttons:
 
-	Start		- Start walker toggle
-	Back		- Stop walker toggle (TBD)
+	Start		- Start walk controller
+	Back		- Stop walker controller (TBD)
 	Logitech	-
 	A(Green)	- Gait select (TBD)
 	B(Red)		- 
@@ -89,3 +89,6 @@ While LB & RB:
 		Up/Down		- Shift Up/Down
 		Left/Right	- Yaw Left/Right
 
+Note that any pose adjustments performed whilst holding a bumper button (LB, RB, LB+RB) will remain once the bumber button is released.
+If the bumper button is then pressed again the pose will return to its default. 
+i.e. Pressing RB will return the Pitch and Roll to default values but not Yaw since it is controlled via LB+RB 
