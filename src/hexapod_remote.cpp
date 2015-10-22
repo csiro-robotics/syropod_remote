@@ -20,7 +20,19 @@ int axis_linear_z;
 int axis_angular_x;
 int axis_angular_y;
 int axis_angular_z;
- 
+
+int A_button;
+int B_button;
+int X_button;
+int Y_button;
+int Left_button;
+int Right_button;
+int Back_button;
+int Start_button;
+int Logitech_button;
+int Left_joy_button;
+int Right_joy_button;
+
 bool axis_linear_x_flip;
 bool axis_linear_y_flip;
 bool axis_linear_z_flip;
@@ -33,18 +45,18 @@ int pub_rate;
 void JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
   //CHECK FOR START BUTTON PRESS
-  if (joy->buttons[7] == 1) //Start button
+  if (joy->buttons[Start_button] == 1) //Start button
   {
     start_state.data = true;
   }
   
-  if (joy->buttons[6] == 1) //Back button
+  if (joy->buttons[Back_button] == 1) //Back button
   {
     start_state.data = false;
   }	
 
  // CHECK CONTROL MODE   
-  if(joy->buttons[4]==1 && joy->buttons[5]==1)	//check if LB&RB are depressed 
+  if(joy->buttons[Left_button]==1 && joy->buttons[Right_button]==1)	//check if LB&RB are depressed 
   {
     ROS_INFO("Left and right buttons");
 
@@ -62,7 +74,7 @@ void JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
     if (axis_angular_y_flip) pose.angular.y *= -1.0;
     if (axis_angular_z_flip) vel.angular.z *= -1.0;
   }
-  else if(joy->buttons[4]==1)			//if left button pressed 
+  else if(joy->buttons[Left_button]==1)			//if left button pressed 
   {
     ROS_INFO("Left button");
 
@@ -80,7 +92,7 @@ void JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
     if (axis_angular_y_flip) pose.linear.y *= -1.0;
     if (axis_angular_z_flip) vel.angular.z *= -1.0;
   }
-  else if(joy->buttons[5]==1)			//if right button pressed 
+  else if(joy->buttons[Right_button]==1)			//if right button pressed 
   {
     ROS_INFO("right button");
     
@@ -130,6 +142,18 @@ int main(int argc, char **argv)
   n.param("hexapod_remote/axis_angular_x", axis_angular_x, 3);
   n.param("hexapod_remote/axis_angular_y", axis_angular_y, 4);
   n.param("hexapod_remote/axis_angular_z", axis_angular_z, 5);
+
+  n.param("hexapod_remote/A_button", A_button, 0);
+  n.param("hexapod_remote/B_button", B_button, 1);
+  n.param("hexapod_remote/X_button", X_button, 2);
+  n.param("hexapod_remote/Y_button", Y_button, 3);
+  n.param("hexapod_remote/Left_button", Left_button, 4);
+  n.param("hexapod_remote/Right_button", Right_button, 5);
+  n.param("hexapod_remote/Back_button", Back_button, 6);
+  n.param("hexapod_remote/Start_button", Start_button, 7);
+  n.param("hexapod_remote/Logitech_button", Logitech_button, 8);
+  n.param("hexapod_remote/Left_joy_button", Left_joy_button, 9);
+  n.param("hexapod_remote/Right_joy_button", Right_joy_button, 10);
 
   n.param("hexapod_remote/axis_linear_x_flip", axis_linear_x_flip, true);
   n.param("hexapod_remote/axis_linear_y_flip", axis_linear_y_flip, false);

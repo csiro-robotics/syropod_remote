@@ -14,27 +14,48 @@ Mapping:
 
 	/joy: (Mode: X)
 		axis
-			1	-Left Joy Stick (Left/Right, Unit vector: 1.0,-1.0) 
-			2	-Left Joy Stick	(Up/Down, Unit vector: 1.0,-1.0)
-			3	-Left Trigger (Vector starts at 0.0 upon first pull goes to -1.0 depressed and 1.0 released)
-			4	-Right Joy Stick (Left/Right, Unit vector: 1.0,-1.0)
-			5	-Left Joy Stick	(Up/Down, Unit vector: 1.0,-1.0)
-			6	-Right Trigger (Vector starts at 0.0 upon first pull goes to -1.0 depressed and 1.0 released)
-			7	-Direction pad (left/right, Unit singular: 1.0,-1.0)
-			8	-Direction pad (Up/Down, Unit singular: 1.0,-1.0)
+			0	-Left Joy Stick (Left/Right, Unit vector: 1.0,-1.0) 
+			1	-Left Joy Stick	(Up/Down, Unit vector: 1.0,-1.0)
+			2	-Left Trigger (Vector starts at 0.0 upon first pull goes to -1.0 depressed and 1.0 released)
+			3	-Right Joy Stick (Left/Right, Unit vector: 1.0,-1.0)
+			4	-Right Joy Stick	(Up/Down, Unit vector: 1.0,-1.0)
+			5	-Right Trigger (Vector starts at 0.0 upon first pull goes to -1.0 depressed and 1.0 released)
+			6	-Direction pad (left/right, Unit singular: 1.0,-1.0)
+			7	-Direction pad (Up/Down, Unit singular: 1.0,-1.0)
 		buttons (Units 0=off 1=on)
+			0	-A(green)
+			1	-B(Red)
+			2	-X(blue)
+			3	-Y(Yellow)
+			4	-LB 
+			5	-RB
+			6	-Back
+			7	-Start
+			8	-Logitech
+			9	-Left Joy Button
+			10	-Right Joy Button
+
+	/joy (Mode: D)
+		axis
+			0	-Left Joy Stick (Left/Right, Unit vector: 1.0,-1.0) 
+			1	-Left Joy Stick	(Up/Down, Unit vector: 1.0,-1.0)
+			2	-Right Joy Stick (Left/Right, Unit vector: 1.0,-1.0)
+			3	-Right Joy Stick	(Up/Down, Unit vector: 1.0,-1.0)
+			4	-Direction pad (left/right, Unit singular: 1.0,-1.0)
+			5	-Direction pad (Up/Down, Unit singular: 1.0,-1.0)
+		buttons (Units 0=off 1=on)
+			0	-X(blue)
 			1	-A(green)
 			2	-B(Red)
-			3	-X(blue)
-			4	-Y(Yellow)
-			5	-LB 
-			6	-RB
-			7	-Back
-			8	-Start
-			9	-Logitech
+			3	-Y(Yellow)
+			4	-LB 
+			5	-RB
+			6	-Left Trigger
+			7	-Right Trigger
+			8	-Back
+			9	-Start
 			10	-Left Joy Button
 			11	-Right Joy Button
-
 
 Below is a list of expected operation while using the joystick. 
 This is subject to change throughout development.
@@ -57,7 +78,7 @@ No bumper buttons depressed:
 
 	Right joystick
 		Up/Down		- N/A
-		Left/Right	- Rotate Left/Right
+		Left/Right	- Rotate Left/Right (Only works with linear velocity, i.e. while left joystick is giving some input)
 
 While LB:
 
