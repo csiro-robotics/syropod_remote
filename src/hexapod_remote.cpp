@@ -42,6 +42,9 @@ bool axis_angular_z_flip;
 
 int pub_rate;
 
+bool correctTriggerRight = true;
+bool correctTriggerLeft = true;
+
 void JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
   //CHECK FOR START BUTTON PRESS
@@ -126,6 +129,18 @@ void JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
     if (axis_angular_y_flip) vel.angular.y *= -1.0;
     if (axis_angular_z_flip) vel.angular.z *= -1.0;
   } 
+  
+  //Trigger axes from /joy are defaulted to zero until the first trigger pull,
+  //This corrects the value initially to 1.0 as per the actual trigger position.
+  if (joy->axes[axis_linear_z] == 0.0 && correctTriggerLeft)
+    vel.linear.z = 1.0;
+  else
+    correctTriggerLeft = false;
+  
+  if (joy->axes[axis_angular_z] == 0.0 && correctTriggerRight)
+    vel.angular.z = 1.0;
+  else
+    correctTriggerRight = false;  
 }
 
 int main(int argc, char **argv)

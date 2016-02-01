@@ -62,8 +62,8 @@ This is subject to change throughout development.
 
 Buttons:
 
-	Start		- Start walk controller
-	Back		- Stop walker controller (TBD)
+	Start		- Start walk controller and initiate start up posing sequence
+	Back		- Stop walker controller and initiate shut down posing sequence
 	Logitech	-
 	A(Green)	- Gait select (TBD)
 	B(Red)		- 
@@ -90,6 +90,14 @@ While LB:
 		Up/Down		- Shift body Forward/Backward
 		Left/Right	- Shift body Left/Right
 
+	Right Trigger
+		In		- Increase posing speed
+		Out		- Decrease posing speed
+
+	Left Trigger
+		In		- Increase walking speed
+		Out		- Decreased walking speed
+
 While RB:
 
 	Left joystick 
@@ -100,6 +108,14 @@ While RB:
 		Up/Down		- Pitch Down/Up 
 		Left/Right	- Roll Left/Right
 
+	Right Trigger
+		In		- Increase posing speed
+		Out		- Decrease posing speed
+
+	Left Trigger
+		In		- Increase walking speed
+		Out		- Decreased walking speed
+
 While LB & RB:
 		
 	Left joystick 
@@ -109,6 +125,14 @@ While LB & RB:
 	Right joystick
 		Up/Down		- Shift Up/Down
 		Left/Right	- Yaw Left/Right
+
+	Right Trigger
+		In		- Increase posing speed
+		Out		- Decrease posing speed
+
+	Left Trigger
+		In		- Increase walking speed
+		Out		- Decreased walking speed
 
 Note that any pose adjustments performed whilst holding a bumper button (LB, RB, LB+RB) will remain once the bumber button is released.
 If the bumper button is then pressed again the pose will return to its default. 
