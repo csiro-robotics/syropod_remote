@@ -58,8 +58,4 @@
     <param name="pub_rate" value="100"/>
 </node>
 
-<!-- Rosbridge server --> 
-
-<include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />
-
 </launch>
