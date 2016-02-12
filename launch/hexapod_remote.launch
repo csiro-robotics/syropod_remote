@@ -1,0 +1,65 @@
+<launch>
+
+<node pkg="joy" type="joy_node" name="joystick"/>
+
+<node pkg="hexapod_remote" type="hexapod_remote" name="hexapod_remote" output="screen">
+    <!--Joystick in X mode-->
+    <param name="axis_linear_x" value="0"/>
+    <param name="axis_linear_y" value="1"/>
+    <param name="axis_linear_z" value="2"/>
+    <param name="axis_angular_x" value="3"/>
+    <param name="axis_angular_y" value="4"/>
+    <param name="axis_angular_z" value="5"/>
+
+    <param name="A_button" value="0"/>
+    <param name="B_button" value="1"/>
+    <param name="X_button" value="2"/>
+    <param name="Y_button" value="3"/>
+    <param name="Left_button" value="4"/>
+    <param name="Right_button" value="5"/>
+    <param name="Back_button" value="6"/>
+    <param name="Start_button" value="7"/>
+    <param name="Logitech_button" value="8"/>
+    <param name="Left_joy_button" value="9"/>
+    <param name="Right_joy_button" value="10"/>
+    <!-- End X mode -->
+
+    <!--Joystick in D mode-->
+    <!--
+    <param name="axis_linear_x" value="0"/>
+    <param name="axis_linear_y" value="1"/>
+    <param name="axis_linear_z" value="4"/>
+    <param name="axis_angular_x" value="2"/>
+    <param name="axis_angular_y" value="3"/>
+    <param name="axis_angular_z" value="5"/>
+
+    <param name="A_button" value="1"/>
+    <param name="B_button" value="2"/>
+    <param name="X_button" value="0"/>
+    <param name="Y_button" value="3"/>
+    <param name="Left_button" value="4"/>
+    <param name="Right_button" value="5"/>
+    <param name="Back_button" value="8"/>
+    <param name="Start_button" value="9"/>
+    <param name="Logitech_button" value="9"/>
+    <param name="Left_joy_button" value="10"/>
+    <param name="Right_joy_button" value="11"/>
+    -->
+    <!-- End D mode -->
+
+    
+    <param name="axis_linear_x_flip" value="true"/>
+    <param name="axis_linear_y_flip" value="false"/>   
+    <param name="axis_linear_z_flip" value="false"/>
+    <param name="axis_angular_x_flip" value="true"/>
+    <param name="axis_angular_y_flip" value="false"/>
+    <param name="axis_angular_z_flip" value="false"/>
+    
+    <param name="pub_rate" value="100"/>
+</node>
+
+<!-- Rosbridge server --> 
+
+<include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />
+
+</launch>
