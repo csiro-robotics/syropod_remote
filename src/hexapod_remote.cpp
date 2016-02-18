@@ -54,8 +54,26 @@ bool axis_angular_z_flip;
 
 int pub_rate;
 
+int sensitivity;
+
 void AndroidJoyCallback(const hexapod_remote::AndroidJoy::ConstPtr& control){
     start_state.data = control->start.data;
+
+    //Stop processing
+    if(!start_state.data){
+        pose.linear.x  = 0;
+        pose.linear.y  = 0;
+        pose.linear.z  = 0;
+        pose.angular.x = 0;
+        pose.angular.y = 0;
+        pose.angular.z = 0;
+        vel.linear.x = 0;
+        vel.linear.y = 0;
+        vel.linear.z = 0;
+        vel.angular.x = 0;
+        vel.angular.y = 0;
+        vel.angular.z = 0;
+    }
     vel.linear.x = control->leftJoy.x;
     vel.linear.y = control->leftJoy.y;
     vel.linear.z = control->leftJoy.z;
@@ -106,15 +124,33 @@ void AndroidSensorCallback(const hexapod_remote::AndroidSensor::ConstPtr& contro
     */
     start_state.data = control->start.data;
 
+    //Stop processing
+    if(!start_state.data){
+        pose.linear.x  = 0;
+        pose.linear.y  = 0;
+        pose.linear.z  = 0;
+        pose.angular.x = 0;
+        pose.angular.y = 0;
+        pose.angular.z = 0;
+        vel.linear.x = 0;
+        vel.linear.y = 0;
+        vel.linear.z = 0;
+        vel.angular.x = 0;
+        vel.angular.y = 0;
+        vel.angular.z = 0;
+    }
     /**
     * Logic regarding deciding hexapod's moving(Walk Foward/Backward & Strafe Left/Right)
     */
-    orientationX = 0 + round(control->orientation.x/90*10)/10;
-    orientationY = 0 + (-1)*round(control->orientation.y/90*10)/10;
+    orientationX = 0 + round(control->orientation.x/90*sensitivity)/sensitivity;
+    orientationY = 0 + round(control->orientation.y/90*sensitivity)/sensitivity;
+
+
+    if (axis_linear_x_flip) orientationX *= -1.0;
+    if (axis_linear_y_flip) orientationX *= -1.0;
 
     // Get rid of value exceeding to limit
     if(std::abs(orientationY)>1) orientationY = 0;
-
 
     /**
     * Logic regarding deciding hexapod's rotation 
@@ -169,6 +205,8 @@ void AndroidSensorCallback(const hexapod_remote::AndroidSensor::ConstPtr& contro
         vel.linear.x = orientationX;
         vel.linear.y = orientationY;
     }
+
+    return;
 }
 
 int main(int argc, char **argv)
@@ -198,13 +236,14 @@ int main(int argc, char **argv)
     n.param("hexapod_remote/Left_joy_button", Left_joy_button, 9);
     n.param("hexapod_remote/Right_joy_button", Right_joy_button, 10);
 
-    n.param("hexapod_remote/axis_linear_x_flip", axis_linear_x_flip, true);
-    n.param("hexapod_remote/axis_linear_y_flip", axis_linear_y_flip, false);
+    n.param("hexapod_remote/axis_linear_x_flip", axis_linear_x_flip, false);
+    n.param("hexapod_remote/axis_linear_y_flip", axis_linear_y_flip, true);
     n.param("hexapod_remote/axis_linear_z_flip", axis_linear_z_flip, false);
     n.param("hexapod_remote/axis_angular_x_flip", axis_angular_x_flip, true); 
     n.param("hexapod_remote/axis_angular_y_flip", axis_angular_y_flip, false);
     n.param("hexapod_remote/axis_angular_z_flip", axis_angular_z_flip, false);
 
+    n.param("hexapod_remote/sensitivity", sensitivity, 10);
     n.param("hexapod_remote/pub_rate",pub_rate, 50);
 
     //setup publish loop_rate 

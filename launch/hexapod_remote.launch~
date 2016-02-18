@@ -56,6 +56,12 @@
     <param name="axis_angular_z_flip" value="false"/>
     
     <param name="pub_rate" value="100"/>
+    <param name="sensitivity" value="3"/>
+
 </node>
+
+<!-- Rosbridge server --> 
+
+<include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />
 
 </launch>
