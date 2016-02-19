@@ -73,6 +73,7 @@ void AndroidJoyCallback(const hexapod_remote::AndroidJoy::ConstPtr& control){
         vel.angular.x = 0;
         vel.angular.y = 0;
         vel.angular.z = 0;
+        return;
     }
     vel.linear.x = control->leftJoy.x;
     vel.linear.y = control->leftJoy.y;
@@ -138,6 +139,7 @@ void AndroidSensorCallback(const hexapod_remote::AndroidSensor::ConstPtr& contro
         vel.angular.x = 0;
         vel.angular.y = 0;
         vel.angular.z = 0;
+        return;
     }
     /**
     * Logic regarding deciding hexapod's moving(Walk Foward/Backward & Strafe Left/Right)
