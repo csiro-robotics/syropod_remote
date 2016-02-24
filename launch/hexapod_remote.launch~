@@ -56,7 +56,12 @@
     <param name="axis_angular_z_flip" value="false"/>
     
     <param name="pub_rate" value="100"/>
+
+    <!-- bigger is more sensitive to value of orientation sensor -->
     <param name="sensitivity" value="3"/>
+
+    <!-- compass direction -->
+    <param name="compass_flip" value="false"/>
 
 </node>
 

@@ -51,7 +51,7 @@ bool axis_linear_z_flip;
 bool axis_angular_x_flip;
 bool axis_angular_y_flip;
 bool axis_angular_z_flip;
-
+bool compass_flip;
 int pub_rate;
 
 int sensitivity;
@@ -149,7 +149,7 @@ void AndroidSensorCallback(const hexapod_remote::AndroidSensor::ConstPtr& contro
 
 
     if (axis_linear_x_flip) orientationX *= -1.0;
-    if (axis_linear_y_flip) orientationX *= -1.0;
+    if (axis_linear_y_flip) orientationY *= -1.0;
 
     // Get rid of value exceeding to limit
     if(std::abs(orientationY)>1) orientationY = 0;
@@ -158,6 +158,8 @@ void AndroidSensorCallback(const hexapod_remote::AndroidSensor::ConstPtr& contro
     * Logic regarding deciding hexapod's rotation 
     */
     relativeCompass = control->relativeCompass.data;
+    if(compass_flip) relativeCompass *= -1.0;
+
     if(relativeCompass>0.3 && (std::abs(orientationX)+std::abs(orientationY)<0.3) ) rotate =ROTATE_COUNTERCLOCKWISE;
     else if(relativeCompass<-0.3 && (std::abs(orientationX)+std::abs(orientationY)<0.3)) rotate =ROTATE_CLOCKWISE;
     else rotate = NOT_ROTATE;
@@ -238,8 +240,8 @@ int main(int argc, char **argv)
     n.param("hexapod_remote/Left_joy_button", Left_joy_button, 9);
     n.param("hexapod_remote/Right_joy_button", Right_joy_button, 10);
 
-    n.param("hexapod_remote/axis_linear_x_flip", axis_linear_x_flip, false);
-    n.param("hexapod_remote/axis_linear_y_flip", axis_linear_y_flip, true);
+    n.param("hexapod_remote/axis_linear_x_flip", axis_linear_x_flip, true);
+    n.param("hexapod_remote/axis_linear_y_flip", axis_linear_y_flip, false);
     n.param("hexapod_remote/axis_linear_z_flip", axis_linear_z_flip, false);
     n.param("hexapod_remote/axis_angular_x_flip", axis_angular_x_flip, true); 
     n.param("hexapod_remote/axis_angular_y_flip", axis_angular_y_flip, false);
@@ -247,6 +249,8 @@ int main(int argc, char **argv)
 
     n.param("hexapod_remote/sensitivity", sensitivity, 10);
     n.param("hexapod_remote/pub_rate",pub_rate, 50);
+    n.param("hexapod_remote/compass_flip",compass_flip, true);
+    
 
     //setup publish loop_rate 
     ros::Rate loop_rate(pub_rate); 			//peramiterize  
