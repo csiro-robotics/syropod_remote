@@ -1,64 +1,28 @@
-Hexapod Remote Node
+#Hexapod Remote Node
 
-This node takes /joy commands and converts them into unit vectors for desired velocity, relative pose and commands for the robot. This node should be launched with the startup of the robot as it potentially will trigger launches and mapping/locolisation.
-
-Future work: finish the node!
+This node takes /joy, /android/joy or android/sensor commands and converts them into unit vectors for desired velocity, relative pose and commands for the robot. This node should be launched with the startup of the robot as it potentially will trigger launches and mapping/locolisation.
 
 Topics: 
 
+	Subcribing
+
+	/android/joy
+	/android/sensor
+	/joy
+
+	Publishing
+
 	/desired_velocity
 	/desired_pose
-	/joystick_commands
 
-Mapping:
+Tablet Control:
 
-	/joy: (Mode: X)
-		axis
-			0	-Left Joy Stick (Left/Right, Unit vector: 1.0,-1.0) 
-			1	-Left Joy Stick	(Up/Down, Unit vector: 1.0,-1.0)
-			2	-Left Trigger (Vector starts at 0.0 upon first pull goes to -1.0 depressed and 1.0 released)
-			3	-Right Joy Stick (Left/Right, Unit vector: 1.0,-1.0)
-			4	-Right Joy Stick	(Up/Down, Unit vector: 1.0,-1.0)
-			5	-Right Trigger (Vector starts at 0.0 upon first pull goes to -1.0 depressed and 1.0 released)
-			6	-Direction pad (left/right, Unit singular: 1.0,-1.0)
-			7	-Direction pad (Up/Down, Unit singular: 1.0,-1.0)
-		buttons (Units 0=off 1=on)
-			0	-A(green)
-			1	-B(Red)
-			2	-X(blue)
-			3	-Y(Yellow)
-			4	-LB 
-			5	-RB
-			6	-Back
-			7	-Start
-			8	-Logitech
-			9	-Left Joy Button
-			10	-Right Joy Button
+	Please read readme of Tablet_control to know how to control hexapod with android device
 
-	/joy (Mode: D)
-		axis
-			0	-Left Joy Stick (Left/Right, Unit vector: 1.0,-1.0) 
-			1	-Left Joy Stick	(Up/Down, Unit vector: 1.0,-1.0)
-			2	-Right Joy Stick (Left/Right, Unit vector: 1.0,-1.0)
-			3	-Right Joy Stick	(Up/Down, Unit vector: 1.0,-1.0)
-			4	-Direction pad (left/right, Unit singular: 1.0,-1.0)
-			5	-Direction pad (Up/Down, Unit singular: 1.0,-1.0)
-		buttons (Units 0=off 1=on)
-			0	-X(blue)
-			1	-A(green)
-			2	-B(Red)
-			3	-Y(Yellow)
-			4	-LB 
-			5	-RB
-			6	-Left Trigger
-			7	-Right Trigger
-			8	-Back
-			9	-Start
-			10	-Left Joy Button
-			11	-Right Joy Button
+Joystick Control:
 
-Below is a list of expected operation while using the joystick. 
-This is subject to change throughout development.
+	Below is a list of expected operation while using the joystick. 
+	This is subject to change throughout development.
 
 Buttons:
 
