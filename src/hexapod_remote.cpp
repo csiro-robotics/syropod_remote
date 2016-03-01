@@ -18,7 +18,7 @@
 #define BODY_UP_DOWN_YAW_LEFT_RIGHT_MODE 3
 
 /**
-* This node is intended to convert android's control value into comands for hexapod robot.
+* This node is intended to convert a joypad or android's control values into commands for hexapod robot.
 * this includes velocity vector and body pose vector. along with gait type and start stop commands for mapping and localisation and system
 */
 
@@ -54,6 +54,7 @@ bool axis_angular_y_flip;
 bool axis_angular_z_flip;
 
 bool compass_flip;
+bool imu_flip;
 
 int pub_rate;
 
@@ -62,7 +63,8 @@ bool correctTriggerLeft = true;
 
 int sensitivity;
 
-void AndroidJoyCallback(const hexapod_remote::AndroidJoy::ConstPtr& control){
+void AndroidJoyCallback(const hexapod_remote::AndroidJoy::ConstPtr& control)
+{
     start_state.data = control->start.data;
 
     //Stop processing
@@ -88,34 +90,35 @@ void AndroidJoyCallback(const hexapod_remote::AndroidJoy::ConstPtr& control){
     /**
     * Logic regarding deciding hexapod's pose
     */
-    switch(control->mode.data){
+    switch(control->mode.data)
+    {
         case ROTATE_MODE:
-        vel.angular.x = control->rightJoy.x;
-        break;
+          vel.angular.x = control->rightJoy.x;
+          break;
         case BODY_FORWARD_BACKWARD_LEFT_RIGHT_MODE:
-        pose.linear.x  = control->rightJoy.x;
-        pose.linear.y  = control->rightJoy.y;
-        pose.linear.z  = 0;
-        pose.angular.x = 0;
-        pose.angular.y = 0;
-        pose.angular.z = 0;
-        break;
+          pose.linear.x  = control->rightJoy.x;
+          pose.linear.y  = control->rightJoy.y;
+          pose.linear.z  = 0;
+          pose.angular.x = 0;
+          pose.angular.y = 0;
+          pose.angular.z = 0;
+          break;
         case PITCH_DOWN_UP_ROLL_LEFT_RIGHT_MODE:
-        pose.linear.x  = 0;
-        pose.linear.y  = 0;
-        pose.linear.z  = 0;
-        pose.angular.x = control->rightJoy.x;
-        pose.angular.y = control->rightJoy.y;
-        pose.angular.z = 0;
-        break;
+          pose.linear.x  = 0;
+          pose.linear.y  = 0;
+          pose.linear.z  = 0;
+          pose.angular.x = control->rightJoy.x;
+          pose.angular.y = control->rightJoy.y;
+          pose.angular.z = 0;
+          break;
         case BODY_UP_DOWN_YAW_LEFT_RIGHT_MODE:
-        pose.linear.x  = 0;
-        pose.linear.y  = 0;
-        pose.linear.z  = control->rightJoy.y;
-        pose.angular.x = 0;
-        pose.angular.y = 0;
-        pose.angular.z = control->rightJoy.x;
-        break;
+          pose.linear.x  = 0;
+          pose.linear.y  = 0;
+          pose.linear.z  = control->rightJoy.y;
+          pose.angular.x = 0;
+          pose.angular.y = 0;
+          pose.angular.z = -control->rightJoy.x;
+          break;
     }
 }
 
@@ -132,7 +135,8 @@ void AndroidSensorCallback(const hexapod_remote::AndroidSensor::ConstPtr& contro
     start_state.data = control->start.data;
 
     //Stop processing
-    if(!start_state.data){
+    if(!start_state.data)
+    {
         pose.linear.x  = 0;
         pose.linear.y  = 0;
         pose.linear.z  = 0;
@@ -147,34 +151,43 @@ void AndroidSensorCallback(const hexapod_remote::AndroidSensor::ConstPtr& contro
         vel.angular.z = 0;
         return;
     }
+    
     /**
     * Logic regarding deciding hexapod's moving(Walk Foward/Backward & Strafe Left/Right)
     */
     orientationX = 0 + round(control->orientation.x/90*sensitivity)/sensitivity;
     orientationY = 0 + round(control->orientation.y/90*sensitivity)/sensitivity;
-
-
-    if (axis_linear_x_flip) orientationX *= -1.0;
-    if (axis_linear_y_flip) orientationY *= -1.0;
-
+    
+    if (axis_linear_x_flip || imu_flip) 
+      orientationX *= -1.0;
+    
+    if (axis_linear_y_flip || imu_flip) 
+      orientationY *= -1.0;
+    
     // Get rid of value exceeding to limit
-    if(std::abs(orientationY)>1) orientationY = 0;
+    if(std::abs(orientationY)>1) 
+      orientationY = 0;
 
     /**
     * Logic regarding deciding hexapod's rotation 
     */
     relativeCompass = control->relativeCompass.data;
-    if(compass_flip) relativeCompass *= -1.0;
+    if(compass_flip) 
+      relativeCompass *= -1.0;
 
-    if(relativeCompass>0.3 && (std::abs(orientationX)+std::abs(orientationY)<0.3) ) rotate =ROTATE_COUNTERCLOCKWISE;
-    else if(relativeCompass<-0.3 && (std::abs(orientationX)+std::abs(orientationY)<0.3)) rotate =ROTATE_CLOCKWISE;
-    else rotate = NOT_ROTATE;
+    if(relativeCompass>0.3 && (std::abs(orientationX)+std::abs(orientationY)<0.3) ) 
+      rotate =ROTATE_COUNTERCLOCKWISE;
+    else if(relativeCompass<-0.3 && (std::abs(orientationX)+std::abs(orientationY)<0.3)) 
+      rotate =ROTATE_CLOCKWISE;
+    else 
+      rotate = NOT_ROTATE;
 
     /**
     * Logic regarding deciding hexapod's pose
     */
-    switch(control->mode.data){
-        case BODY_FORWARD_BACKWARD_LEFT_RIGHT_MODE:
+    switch(control->mode.data)
+    {
+      case BODY_FORWARD_BACKWARD_LEFT_RIGHT_MODE:
         pose.linear.x  = control->joy.x;
         pose.linear.y  = control->joy.y;
         pose.linear.z  = 0;
@@ -182,7 +195,7 @@ void AndroidSensorCallback(const hexapod_remote::AndroidSensor::ConstPtr& contro
         pose.angular.y = 0;
         pose.angular.z = 0;
         break;
-        case PITCH_DOWN_UP_ROLL_LEFT_RIGHT_MODE:
+      case PITCH_DOWN_UP_ROLL_LEFT_RIGHT_MODE:
         pose.linear.x  = 0;
         pose.linear.y  = 0;
         pose.linear.z  = 0;
@@ -190,13 +203,13 @@ void AndroidSensorCallback(const hexapod_remote::AndroidSensor::ConstPtr& contro
         pose.angular.y = control->joy.y;
         pose.angular.z = 0;
         break;
-        case BODY_UP_DOWN_YAW_LEFT_RIGHT_MODE:
+      case BODY_UP_DOWN_YAW_LEFT_RIGHT_MODE:
         pose.linear.x  = 0;
         pose.linear.y  = 0;
         pose.linear.z  = control->joy.y;
         pose.angular.x = 0;
         pose.angular.y = 0;
-        pose.angular.z = control->joy.x;
+        pose.angular.z = -control->joy.x;
         break;
     }
 
@@ -211,24 +224,12 @@ void AndroidSensorCallback(const hexapod_remote::AndroidSensor::ConstPtr& contro
         vel.linear.x = ENABLE_ROTATION;
         vel.linear.y = ENABLE_ROTATION;
     }
-    else{
+    else
+    {
         vel.linear.x = orientationX;
         vel.linear.y = orientationY;
     }
-
     return;
-  
-  //Trigger axes from /joy are defaulted to zero until the first trigger pull,
-  //This corrects the value initially to 1.0 as per the actual trigger position.
-  if (joy->axes[axis_linear_z] == 0.0 && correctTriggerLeft)
-    vel.linear.z = 1.0;
-  else
-    correctTriggerLeft = false;
-  
-  if (joy->axes[axis_angular_z] == 0.0 && correctTriggerRight)
-    vel.angular.z = 1.0;
-  else
-    correctTriggerRight = false;  
 }
 
 void JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
@@ -366,6 +367,7 @@ int main(int argc, char **argv)
     n.param("hexapod_remote/sensitivity", sensitivity, 10);
     n.param("hexapod_remote/pub_rate",pub_rate, 50);
     n.param("hexapod_remote/compass_flip",compass_flip, true);
+    n.param("hexapod_remote/imu_flip", imu_flip, true);
     
 
     //setup publish loop_rate 
@@ -374,9 +376,9 @@ int main(int argc, char **argv)
     // subscribe to published topic
     ros::Subscriber androidSensorSub = n.subscribe("android/sensor", 1, AndroidSensorCallback);
     ros::Subscriber androidJoySub = n.subscribe("android/joy", 1, AndroidJoyCallback);
-	ros::Subscriber joypadSub = n.subscribe("joy", 1, JoyCallback);
+    ros::Subscriber joypadSub = n.subscribe("joy", 1, JoyCallback);
     
-	//setup publishers 
+    //setup publishers 
     //velocity publisher
     ros::Publisher velocity_pub = n.advertise<geometry_msgs::Twist>("desired_velocity",1);
     //pose publisher

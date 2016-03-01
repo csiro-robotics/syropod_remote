@@ -62,6 +62,9 @@
 
     <!-- compass direction -->
     <param name="compass_flip" value="true"/>
+    
+    <!-- imu direction -->
+    <param name="imu_flip" value="true"/>
 
 </node>
 
