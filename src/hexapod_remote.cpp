@@ -158,11 +158,17 @@ void AndroidSensorCallback(const hexapod_remote::AndroidSensor::ConstPtr& contro
     orientationX = 0 + round(control->orientation.x/90*sensitivity)/sensitivity;
     orientationY = 0 + round(control->orientation.y/90*sensitivity)/sensitivity;
     
-    if (axis_linear_x_flip || imu_flip) 
+    if (axis_linear_x_flip) 
       orientationX *= -1.0;
     
-    if (axis_linear_y_flip || imu_flip) 
+    if (axis_linear_y_flip) 
       orientationY *= -1.0;
+    
+    if (imu_flip)
+    {
+      orientationX *= -1.0;
+      orientationY *= -1.0;
+    }
     
     // Get rid of value exceeding to limit
     if(std::abs(orientationY)>1) 
