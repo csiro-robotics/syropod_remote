@@ -26,6 +26,7 @@
 geometry_msgs::Twist vel;
 geometry_msgs::Twist pose; 
 std_msgs::Bool start_state;
+std_msgs::Int8 gait_mode;
 
 int axis_linear_x;
 int axis_linear_y;
@@ -66,6 +67,7 @@ int sensitivity;
 void AndroidJoyCallback(const hexapod_remote::AndroidJoy::ConstPtr& control)
 {
     start_state.data = control->start.data;
+    gait_mode.data = control->gait.data;
 
     //Stop processing
     if(!start_state.data){
@@ -119,7 +121,7 @@ void AndroidJoyCallback(const hexapod_remote::AndroidJoy::ConstPtr& control)
           pose.angular.y = 0;
           pose.angular.z = -control->rightJoy.x;
           break;
-    }
+    }       
 }
 
 void AndroidSensorCallback(const hexapod_remote::AndroidSensor::ConstPtr& control)
@@ -391,6 +393,7 @@ int main(int argc, char **argv)
     ros::Publisher pose_pub = n.advertise<geometry_msgs::Twist>("desired_pose",1);
     //status publisheri
     ros::Publisher start_state_pub = n.advertise<std_msgs::Bool>("start_state", 1);
+    ros::Publisher gait_mode_pub = n.advertise<std_msgs::Int8>("gait_mode", 1);
 
     //setup default variable values
     start_state.data = false;
@@ -401,6 +404,7 @@ int main(int argc, char **argv)
         velocity_pub.publish(vel);
         pose_pub.publish(pose);
         start_state_pub.publish(start_state);
+        gait_mode_pub.publish(gait_mode);
         ros::spinOnce();
         loop_rate.sleep();
     }
