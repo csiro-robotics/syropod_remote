@@ -48,8 +48,8 @@
     <!-- End D mode -->
 
     
-    <param name="axis_linear_x_flip" value="false"/>
-    <param name="axis_linear_y_flip" value="true"/>   
+    <param name="axis_linear_x_flip" value="true"/>
+    <param name="axis_linear_y_flip" value="false"/>   
     <param name="axis_linear_z_flip" value="false"/>
     <param name="axis_angular_x_flip" value="true"/>
     <param name="axis_angular_y_flip" value="false"/>

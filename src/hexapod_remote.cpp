@@ -27,6 +27,8 @@ geometry_msgs::Twist vel;
 geometry_msgs::Twist pose; 
 std_msgs::Bool start_state;
 std_msgs::Int8 gait_mode;
+std_msgs::Bool leg_state_toggle;
+std_msgs::Int8 leg_selection;
 
 int axis_linear_x;
 int axis_linear_y;
@@ -63,6 +65,10 @@ bool correctTriggerRight = true;
 bool correctTriggerLeft = true;
 
 int sensitivity;
+
+bool debounceA = true;
+bool debounceB = true;
+bool debounceY = true;
 
 void AndroidJoyCallback(const hexapod_remote::AndroidJoy::ConstPtr& control)
 {
@@ -252,6 +258,38 @@ void JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
   {
     start_state.data = false;
   }	
+  
+  //CHECK FOR B BUTTON PRESS
+  if (joy->buttons[B_button] == 1)
+  {
+    leg_state_toggle.data = true;
+  }
+  else if (joy->buttons[B_button] == 0)
+  {
+    leg_state_toggle.data = false;
+  }
+  
+  //CHECK FOR Y BUTTON PRESS
+  if (joy->buttons[Y_button] == 1 && debounceY == true)
+  {    
+    leg_selection.data = (leg_selection.data+1)%6;
+    debounceY = false;
+  }  
+  else if (joy->buttons[Y_button] == 0)
+  {
+    debounceY = true;
+  }
+  
+  //CHECK FOR A BUTTON PRESS
+  if (joy->buttons[A_button] == 1 && debounceA == true)
+  {    
+    gait_mode.data = (gait_mode.data+1)%3;
+    debounceA = false;
+  }  
+  else if (joy->buttons[Y_button] == 0)
+  {
+    debounceA = true;
+  }
 
  // CHECK CONTROL MODE   
   if(joy->buttons[Left_button]==1 && joy->buttons[Right_button]==1)	//check if LB&RB are depressed 
@@ -344,6 +382,10 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "hexapod_remote");
 
     ros::NodeHandle n;
+    
+    //Init values
+    leg_selection.data = -1;
+    gait_mode.data = -1;
 
     // get and set parameter defaults if parameters arn't on the param server  
     n.param("hexapod_remote/axis_linear_x", axis_linear_x, 0);
@@ -388,12 +430,14 @@ int main(int argc, char **argv)
     
     //setup publishers 
     //velocity publisher
-    ros::Publisher velocity_pub = n.advertise<geometry_msgs::Twist>("desired_velocity",1);
+    ros::Publisher velocity_pub = n.advertise<geometry_msgs::Twist>("hexapod_remote/desired_velocity",1);
     //pose publisher
-    ros::Publisher pose_pub = n.advertise<geometry_msgs::Twist>("desired_pose",1);
+    ros::Publisher pose_pub = n.advertise<geometry_msgs::Twist>("hexapod_remote/desired_pose",1);
     //status publisheri
-    ros::Publisher start_state_pub = n.advertise<std_msgs::Bool>("start_state", 1);
-    ros::Publisher gait_mode_pub = n.advertise<std_msgs::Int8>("gait_mode", 1);
+    ros::Publisher start_state_pub = n.advertise<std_msgs::Bool>("hexapod_remote/start_state", 1);
+    ros::Publisher gait_mode_pub = n.advertise<std_msgs::Int8>("hexapod_remote/gait_mode", 1);
+    ros::Publisher leg_selection_pub = n.advertise<std_msgs::Int8>("hexapod_remote/leg_selection", 1);
+    ros::Publisher leg_state_toggle_pub = n.advertise<std_msgs::Bool>("hexapod_remote/leg_state_toggle", 1);
 
     //setup default variable values
     start_state.data = false;
@@ -405,6 +449,8 @@ int main(int argc, char **argv)
         pose_pub.publish(pose);
         start_state_pub.publish(start_state);
         gait_mode_pub.publish(gait_mode);
+        leg_selection_pub.publish(leg_selection);
+        leg_state_toggle_pub.publish(leg_state_toggle);
         ros::spinOnce();
         loop_rate.sleep();
     }
