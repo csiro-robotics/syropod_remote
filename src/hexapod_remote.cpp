@@ -2,8 +2,8 @@
 #include "std_msgs/Bool.h"
 #include "geometry_msgs/Twist.h"
 #include "sensor_msgs/Joy.h"
-#include "hexapod_remote/AndroidSensor.h"
-#include "hexapod_remote/AndroidJoy.h"
+#include "hexapod_remote/androidSensor.h"
+#include "hexapod_remote/androidJoy.h"
 
 // define constant which is related to rotation. These are used only in sensor-type UI.
 #define NOT_ROTATE 0.0
@@ -70,7 +70,7 @@ bool debounceA = true;
 bool debounceB = true;
 bool debounceY = true;
 
-void AndroidJoyCallback(const hexapod_remote::AndroidJoy::ConstPtr& control)
+void androidJoyCallback(const hexapod_remote::androidJoy::ConstPtr& control)
 {
     start_state.data = control->start.data;
     gait_mode.data = control->gait.data;
@@ -130,7 +130,7 @@ void AndroidJoyCallback(const hexapod_remote::AndroidJoy::ConstPtr& control)
     }       
 }
 
-void AndroidSensorCallback(const hexapod_remote::AndroidSensor::ConstPtr& control)
+void androidSensorCallback(const hexapod_remote::androidSensor::ConstPtr& control)
 {
     float orientationX    = 0.0;
     float orientationY    = 0.0;
@@ -424,8 +424,8 @@ int main(int argc, char **argv)
     ros::Rate loop_rate(pub_rate); 			//parameterize  
 
     // subscribe to published topic
-    ros::Subscriber androidSensorSub = n.subscribe("android/sensor", 1, AndroidSensorCallback);
-    ros::Subscriber androidJoySub = n.subscribe("android/joy", 1, AndroidJoyCallback);
+    ros::Subscriber androidSensorSub = n.subscribe("android/sensor", 1, androidSensorCallback);
+    ros::Subscriber androidJoySub = n.subscribe("android/joy", 1, androidJoyCallback);
     ros::Subscriber joypadSub = n.subscribe("joy", 1, JoyCallback);
     
     //setup publishers 
