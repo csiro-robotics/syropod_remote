@@ -2,7 +2,7 @@
 
 <node pkg="joy" type="joy_node" name="joystick"/>
 
-<node pkg="hexapod_remote" type="hexapod_remote" name="hexapod_remote" output="screen">
+<node pkg="hexapod_remote" type="hexapod_remote" name="hexapod_remote">
     <!--Joystick in X mode-->
     <param name="axis_linear_x" value="0"/>
     <param name="axis_linear_y" value="1"/>
@@ -10,6 +10,9 @@
     <param name="axis_angular_x" value="3"/>
     <param name="axis_angular_y" value="4"/>
     <param name="axis_angular_z" value="5"/>
+    
+    <param name="dpad_left_right" value="6"/>
+    <param name="dpad_up_down" value="7"/>    
 
     <param name="A_button" value="0"/>
     <param name="B_button" value="1"/>
@@ -65,6 +68,9 @@
     
     <!-- imu direction -->
     <param name="imu_flip" value="true"/>
+    
+    <!-- parameter adjustment sensitivity -->
+    <param name="param_adjust_sensitivity" value="10"/>
 
 </node>
 

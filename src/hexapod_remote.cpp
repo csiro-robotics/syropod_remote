@@ -29,6 +29,8 @@ std_msgs::Bool start_state;
 std_msgs::Int8 gait_mode;
 std_msgs::Bool leg_state_toggle;
 std_msgs::Int8 leg_selection;
+std_msgs::Int8 param_selection;
+std_msgs::Int8 param_adjust;
 
 int axis_linear_x;
 int axis_linear_y;
@@ -36,6 +38,9 @@ int axis_linear_z;
 int axis_angular_x;
 int axis_angular_y;
 int axis_angular_z;
+
+int dpad_up_down;
+int dpad_left_right;
 
 int A_button;
 int B_button;
@@ -65,15 +70,19 @@ bool correctTriggerRight = true;
 bool correctTriggerLeft = true;
 
 int sensitivity;
+int param_adjust_sensitivity;
 
 bool debounceA = true;
 bool debounceB = true;
 bool debounceY = true;
+bool debounceUP = true;
 
 void androidJoyCallback(const hexapod_remote::androidJoy::ConstPtr& control)
 {
     start_state.data = control->start.data;
     gait_mode.data = control->gait.data;
+    param_selection.data = control->paramSelection.data;
+    param_adjust.data = control->paramAdjust.data;
 
     //Stop processing
     if(!start_state.data){
@@ -286,9 +295,22 @@ void JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
     gait_mode.data = (gait_mode.data+1)%3;
     debounceA = false;
   }  
-  else if (joy->buttons[Y_button] == 0)
+  else if (joy->buttons[A_button] == 0)
   {
     debounceA = true;
+  }
+  
+  //CHECK FOR D-PAD PRESS
+  param_adjust.data = joy->axes[dpad_up_down];
+  
+  int numberOfParams = 5; //Currently only three choices TBD
+  if (joy->axes[dpad_left_right] != 0)
+  {
+    param_selection.data = int(param_selection.data - joy->axes[dpad_left_right])%numberOfParams; 
+    if (param_selection.data < 0)
+    {
+      param_selection.data += numberOfParams;
+    }
   }
 
  // CHECK CONTROL MODE   
@@ -386,6 +408,8 @@ int main(int argc, char **argv)
     //Init values
     leg_selection.data = -1;
     gait_mode.data = -1;
+    param_selection.data = 0;
+    param_adjust.data = 0;
 
     // get and set parameter defaults if parameters arn't on the param server  
     n.param("hexapod_remote/axis_linear_x", axis_linear_x, 0);
@@ -394,6 +418,10 @@ int main(int argc, char **argv)
     n.param("hexapod_remote/axis_angular_x", axis_angular_x, 3);
     n.param("hexapod_remote/axis_angular_y", axis_angular_y, 4);
     n.param("hexapod_remote/axis_angular_z", axis_angular_z, 5);
+    
+    n.param("hexapod_remote/dpad_left_right", dpad_left_right, 6);
+    n.param("hexapod_remote/dpad_up_down", dpad_up_down, 7); 
+    
 
     n.param("hexapod_remote/A_button", A_button, 0);
     n.param("hexapod_remote/B_button", B_button, 1);
@@ -405,7 +433,7 @@ int main(int argc, char **argv)
     n.param("hexapod_remote/Start_button", Start_button, 7);
     n.param("hexapod_remote/Logitech_button", Logitech_button, 8);
     n.param("hexapod_remote/Left_joy_button", Left_joy_button, 9);
-    n.param("hexapod_remote/Right_joy_button", Right_joy_button, 10);
+    n.param("hexapod_remote/Right_joy_button", Right_joy_button, 10);    
 
     n.param("hexapod_remote/axis_linear_x_flip", axis_linear_x_flip, true);
     n.param("hexapod_remote/axis_linear_y_flip", axis_linear_y_flip, false);
@@ -418,6 +446,7 @@ int main(int argc, char **argv)
     n.param("hexapod_remote/pub_rate",pub_rate, 50);
     n.param("hexapod_remote/compass_flip",compass_flip, true);
     n.param("hexapod_remote/imu_flip", imu_flip, true);
+    n.param("hexapod_remote/param_adjust_sensitivity", param_adjust_sensitivity, 10);
     
 
     //setup publish loop_rate 
@@ -433,12 +462,15 @@ int main(int argc, char **argv)
     ros::Publisher velocity_pub = n.advertise<geometry_msgs::Twist>("hexapod_remote/desired_velocity",1);
     //pose publisher
     ros::Publisher pose_pub = n.advertise<geometry_msgs::Twist>("hexapod_remote/desired_pose",1);
+    
     //status publisheri
     ros::Publisher start_state_pub = n.advertise<std_msgs::Bool>("hexapod_remote/start_state", 1);
     ros::Publisher gait_mode_pub = n.advertise<std_msgs::Int8>("hexapod_remote/gait_mode", 1);
     ros::Publisher leg_selection_pub = n.advertise<std_msgs::Int8>("hexapod_remote/leg_selection", 1);
     ros::Publisher leg_state_toggle_pub = n.advertise<std_msgs::Bool>("hexapod_remote/leg_state_toggle", 1);
-
+    ros::Publisher param_selection_pub = n.advertise<std_msgs::Int8>("hexapod_remote/param_selection", 1);
+    ros::Publisher param_adjust_pub = n.advertise<std_msgs::Int8>("hexapod_remote/param_adjust", 1);
+    
     //setup default variable values
     start_state.data = false;
 
@@ -451,6 +483,8 @@ int main(int argc, char **argv)
         gait_mode_pub.publish(gait_mode);
         leg_selection_pub.publish(leg_selection);
         leg_state_toggle_pub.publish(leg_state_toggle);
+        param_selection_pub.publish(param_selection);
+        param_adjust_pub.publish(param_adjust);
         ros::spinOnce();
         loop_rate.sleep();
     }
