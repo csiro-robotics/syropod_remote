@@ -75,7 +75,6 @@ int param_adjust_sensitivity;
 bool debounceA = true;
 bool debounceB = true;
 bool debounceY = true;
-bool debounceUP = true;
 
 void androidJoyCallback(const hexapod_remote::androidJoy::ConstPtr& control)
 {
@@ -303,7 +302,7 @@ void JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
   //CHECK FOR D-PAD PRESS
   param_adjust.data = joy->axes[dpad_up_down];
   
-  int numberOfParams = 5; //Currently only three choices TBD
+  int numberOfParams = 5; //Currently only five choices TBD
   if (joy->axes[dpad_left_right] != 0)
   {
     param_selection.data = int(param_selection.data - joy->axes[dpad_left_right])%numberOfParams; 
