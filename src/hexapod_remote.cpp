@@ -291,7 +291,7 @@ void JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
   //CHECK FOR A BUTTON PRESS
   if (joy->buttons[A_button] == 1 && debounceA == true)
   {    
-    gait_mode.data = (gait_mode.data+1)%3;
+    gait_mode.data = (gait_mode.data+1)%4; //4 Gait Options
     debounceA = false;
   }  
   else if (joy->buttons[A_button] == 0)
@@ -302,7 +302,7 @@ void JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
   //CHECK FOR D-PAD PRESS
   param_adjust.data = joy->axes[dpad_up_down];
   
-  int numberOfParams = 5; //Currently only five choices TBD
+  int numberOfParams = 9; //Currently nine choices TBD
   if (joy->axes[dpad_left_right] != 0)
   {
     param_selection.data = int(param_selection.data - joy->axes[dpad_left_right])%numberOfParams; 
