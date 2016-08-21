@@ -28,6 +28,7 @@ geometry_msgs::Twist pose;
 std_msgs::Bool start_state;
 std_msgs::Int8 gait_mode;
 std_msgs::Bool leg_state_toggle;
+std_msgs::Bool test_state_toggle;
 std_msgs::Int8 leg_selection;
 std_msgs::Int8 param_selection;
 std_msgs::Int8 param_adjust;
@@ -277,6 +278,16 @@ void JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
     leg_state_toggle.data = false;
   }
   
+  //CHECK FOR X BUTTON PRESS
+  if (joy->buttons[X_button] == 1)
+  {
+    test_state_toggle.data = true;
+  }
+  else if (joy->buttons[X_button] == 0)
+  {
+    test_state_toggle.data = false;
+  }
+  
   //CHECK FOR Y BUTTON PRESS
   if (joy->buttons[Y_button] == 1 && debounceY == true)
   {    
@@ -469,6 +480,7 @@ int main(int argc, char **argv)
     ros::Publisher leg_state_toggle_pub = n.advertise<std_msgs::Bool>("hexapod_remote/leg_state_toggle", 1);
     ros::Publisher param_selection_pub = n.advertise<std_msgs::Int8>("hexapod_remote/param_selection", 1);
     ros::Publisher param_adjust_pub = n.advertise<std_msgs::Int8>("hexapod_remote/param_adjust", 1);
+    ros::Publisher test_state_toggle_pub = n.advertise<std_msgs::Bool>("hexapod_remote/test_state_toggle", 1);
     
     //setup default variable values
     start_state.data = false;
@@ -482,6 +494,7 @@ int main(int argc, char **argv)
         gait_mode_pub.publish(gait_mode);
         leg_selection_pub.publish(leg_selection);
         leg_state_toggle_pub.publish(leg_state_toggle);
+	test_state_toggle_pub.publish(test_state_toggle);
         param_selection_pub.publish(param_selection);
         param_adjust_pub.publish(param_adjust);
         ros::spinOnce();
