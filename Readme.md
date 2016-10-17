@@ -1,4 +1,4 @@
-#Hexapod Remote Node
+# Hexapod Remote Node
 
 This node takes /joy, /android/joy or android/sensor commands and converts them into unit vectors for desired velocity, relative pose and commands for the robot. This node should be launched with the startup of the robot as it potentially will trigger launches and mapping/locolisation.
 
@@ -29,10 +29,12 @@ Buttons:
 	Start		- Start walk controller and initiate start up posing sequence
 	Back		- Stop walker controller and initiate shut down posing sequence
 	Logitech	-
-	A(Green)	- Gait select (TBD)
+	A(Green)	- Gait select (cycles through enum in simple_hexapod_controller/standardIncludes.h)
 	B(Red)		- 
 	X(Blue) 	- 
 	Y(yellow)	- 
+    D-pad (L-R) - Param adjustment (percentage adjustment)
+    D-pad (U-D) - Param selection (cycles through enum in simple_hexapod_controller/standardIncludes.h)
 
 No bumper buttons depressed:
 
