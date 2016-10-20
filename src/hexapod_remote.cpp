@@ -549,7 +549,7 @@ int main(int argc, char **argv)
     ros::Subscriber androidSensorSub = n.subscribe("android/sensor", 1, androidSensorCallback);
     ros::Subscriber androidJoySub = n.subscribe("android/joy", 1, androidJoyCallback);
     ros::Subscriber joypadSub = n.subscribe("joy", 1, joyCallback);
-    ros::Subscriber autoNavigationSub = n.subscribe("desired_vel", 1, autoNavigationCallback);
+    ros::Subscriber autoNavigationSub = n.subscribe("hexor_2dNav/desired_velocity", 1, autoNavigationCallback);
     
     //setup publishers 
     //velocity publisher
