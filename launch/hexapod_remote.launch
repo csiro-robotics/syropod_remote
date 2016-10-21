@@ -58,7 +58,7 @@
     <param name="axis_angular_y_flip" value="false"/>
     <param name="axis_angular_z_flip" value="false"/>
     
-    <param name="pub_rate" value="100"/>
+    <param name="pub_rate" value="10"/>
 
     <!-- bigger is more sensitive to value of orientation sensor -->
     <param name="sensitivity" value="3"/>
