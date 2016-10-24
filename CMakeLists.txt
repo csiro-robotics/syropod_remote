@@ -122,7 +122,7 @@ include_directories(
 
 add_executable(hexapod_remote src/hexapod_remote.cpp)
 target_link_libraries(hexapod_remote ${catkin_LIBRARIES})
-add_dependencies(hexapod_remote hexapod_remote_cpp)
+add_dependencies(hexapod_remote hexapod_remote_cpp hexapod_remote_generate_messages_cpp)
 
 ## Declare a C++ library
 # add_library(hexapod_remote
