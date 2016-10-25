@@ -487,7 +487,10 @@ void autoNavigationCallback(const geometry_msgs::Twist &twist)
 {
   if (autoNavigation)
   {
-    vel = twist;
+    //Coordination frame remapping
+    vel.linear.x = twist.linear.x;
+    vel.linear.y = twist.linear.y;
+    vel.angular.x = twist.angular.z;
   }
 }
 
@@ -549,7 +552,7 @@ int main(int argc, char **argv)
     ros::Subscriber androidSensorSub = n.subscribe("android/sensor", 1, androidSensorCallback);
     ros::Subscriber androidJoySub = n.subscribe("android/joy", 1, androidJoyCallback);
     ros::Subscriber joypadSub = n.subscribe("joy", 1, joyCallback);
-    ros::Subscriber autoNavigationSub = n.subscribe("hexor_2dNav/desired_velocity", 1, autoNavigationCallback);
+    ros::Subscriber autoNavigationSub = n.subscribe("cmd_vel", 1, autoNavigationCallback);
     
     //setup publishers 
     //velocity publisher
