@@ -487,10 +487,10 @@ void autoNavigationCallback(const geometry_msgs::Twist &twist)
 {
   if (autoNavigation)
   {
-    //Coordination frame remapping
-    vel.linear.x = twist.linear.x;
-    vel.linear.y = twist.linear.y;
-    vel.angular.x = twist.angular.z;
+    //Coordination frame remapping between autoNav and SHC
+    vel.linear.x = twist.linear.y;
+    vel.linear.y = twist.linear.x;
+    vel.angular.x = -twist.angular.z;
   }
 }
 
