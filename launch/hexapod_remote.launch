@@ -2,7 +2,7 @@
 
 <node pkg="joy" type="joy_node" name="joystick"/>
 
-<node pkg="hexapod_remote" type="hexapod_remote" name="hexapod_remote">
+<node pkg="hexapod_remote" type="hexapod_remote" name="hexapod_remote" output="screen">
     <!--Joystick in X mode-->
     <param name="axis_linear_x" value="0"/>
     <param name="axis_linear_y" value="1"/>
@@ -58,7 +58,7 @@
     <param name="axis_angular_y_flip" value="false"/>
     <param name="axis_angular_z_flip" value="false"/>
     
-    <param name="pub_rate" value="100"/>
+    <param name="pub_rate" value="10"/>
 
     <!-- bigger is more sensitive to value of orientation sensor -->
     <param name="sensitivity" value="3"/>

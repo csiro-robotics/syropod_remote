@@ -22,9 +22,19 @@
 * this includes velocity vector and body pose vector. along with gait type and start stop commands for mapping and localisation and system
 */
 
+enum PoseResetMode
+{
+  NO_RESET,
+  Z_AND_YAW_RESET,
+  X_AND_Y_RESET,
+  PITCH_AND_ROLL_RESET,
+  ALL_RESET,
+};
+
 // set up variables 
 geometry_msgs::Twist vel;
 geometry_msgs::Twist pose; 
+
 std_msgs::Bool start_state;
 std_msgs::Int8 gait_mode;
 std_msgs::Bool leg_state_toggle;
@@ -32,6 +42,7 @@ std_msgs::Bool test_state_toggle;
 std_msgs::Int8 leg_selection;
 std_msgs::Int8 param_selection;
 std_msgs::Int8 param_adjust;
+std_msgs::Int8 pose_reset_mode;
 
 int axis_linear_x;
 int axis_linear_y;
@@ -64,6 +75,8 @@ bool axis_angular_z_flip;
 
 bool compass_flip;
 bool imu_flip;
+
+bool autoNavigation = false;
 
 int pub_rate;
 
@@ -255,7 +268,7 @@ void androidSensorCallback(const hexapod_remote::androidSensor::ConstPtr& contro
     return;
 }
 
-void JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
+void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
   //CHECK FOR START BUTTON PRESS
   if (joy->buttons[Start_button] == 1) //Start button
@@ -263,6 +276,7 @@ void JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
     start_state.data = true;
   }
   
+  //CHECK FOR BACK BUTTON PRESS
   if (joy->buttons[Back_button] == 1) //Back button
   {
     start_state.data = false;
@@ -291,7 +305,10 @@ void JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
   //CHECK FOR Y BUTTON PRESS
   if (joy->buttons[Y_button] == 1 && debounceY == true)
   {    
-    leg_selection.data = (leg_selection.data+1)%6;
+    //leg_selection.data = (leg_selection.data+1)%6;
+    autoNavigation = !autoNavigation;
+    ROS_INFO_COND(autoNavigation, "Auto navigation mode started. All velocity and posing inputs from joypad are now off.");
+    ROS_INFO_COND(!autoNavigation, "Auto navigation mode ended. All velocity and posing inputs from joypad are now on.");
     debounceY = false;
   }  
   else if (joy->buttons[Y_button] == 0)
@@ -322,90 +339,159 @@ void JoyCallback(const sensor_msgs::Joy::ConstPtr& joy)
       param_selection.data += numberOfParams;
     }
   }
-
- // CHECK CONTROL MODE   
-  if(joy->buttons[Left_button]==1 && joy->buttons[Right_button]==1)	//check if LB&RB are depressed 
-  {
-    ROS_INFO("Left and right buttons");
-
-    vel.linear.x = joy->axes[axis_linear_x];
-    vel.linear.y = joy->axes[axis_linear_y];
-    vel.linear.z = joy->axes[axis_linear_z];
-    pose.angular.z = joy->axes[axis_angular_x];
-    pose.linear.z = joy->axes[axis_angular_y];
-    vel.angular.z = joy->axes[axis_angular_z];
-    
-    if (axis_linear_x_flip) vel.linear.x *= -1.0;
-    if (axis_linear_y_flip) vel.linear.y *= -1.0;
-    if (axis_linear_z_flip) vel.linear.z *= -1.0;
-    if (axis_angular_x_flip) pose.angular.x *= -1.0;
-    if (axis_angular_y_flip) pose.angular.y *= -1.0;
-    if (axis_angular_z_flip) vel.angular.z *= -1.0;
-  }
-  else if(joy->buttons[Left_button]==1)			//if left button pressed 
-  {
-    ROS_INFO("Left button");
-
-    vel.linear.x = joy->axes[axis_linear_x];
-    vel.linear.y = joy->axes[axis_linear_y];
-    vel.linear.z = joy->axes[axis_linear_z];
-    pose.linear.x = joy->axes[axis_angular_x];
-    pose.linear.y = joy->axes[axis_angular_y];
-    vel.angular.z = joy->axes[axis_angular_z];
-
-    if (axis_linear_x_flip) vel.linear.x *= -1.0;
-    if (axis_linear_y_flip) vel.linear.y *= -1.0;
-    if (axis_linear_z_flip) vel.linear.z *= -1.0;
-    if (axis_angular_x_flip) pose.linear.x *= -1.0;
-    if (axis_angular_y_flip) pose.linear.y *= -1.0;
-    if (axis_angular_z_flip) vel.angular.z *= -1.0;
-  }
-  else if(joy->buttons[Right_button]==1)			//if right button pressed 
-  {
-    ROS_INFO("right button");
-    
-    vel.linear.x = joy->axes[axis_linear_x];
-    vel.linear.y = joy->axes[axis_linear_y];
-    vel.linear.z = joy->axes[axis_linear_z];
-    pose.angular.x = joy->axes[axis_angular_x];
-    pose.angular.y = joy->axes[axis_angular_y];
-    vel.angular.z = joy->axes[axis_angular_z];
-    
-    if (axis_linear_x_flip) vel.linear.x *= -1.0;
-    if (axis_linear_y_flip) vel.linear.y *= -1.0;
-    if (axis_linear_z_flip) vel.linear.z *= -1.0;
-    if (axis_angular_x_flip) pose.angular.x *= -1.0;
-    if (axis_angular_y_flip) pose.angular.y *= -1.0;
-    if (axis_angular_z_flip) vel.angular.z *= -1.0;
-  }    
-  else						//Proceed with normal control
-  {
-    vel.linear.x = joy->axes[axis_linear_x];
-    vel.linear.y = joy->axes[axis_linear_y];
-    vel.linear.z = joy->axes[axis_linear_z];
-    vel.angular.x = joy->axes[axis_angular_x];
-    vel.angular.y = joy->axes[axis_angular_y];
-    vel.angular.z = joy->axes[axis_angular_z];
-
-    if (axis_linear_x_flip) vel.linear.x *= -1.0;
-    if (axis_linear_y_flip) vel.linear.y *= -1.0;
-    if (axis_linear_z_flip) vel.linear.z *= -1.0;
-    if (axis_angular_x_flip) vel.angular.x *= -1.0;
-    if (axis_angular_y_flip) vel.angular.y *= -1.0;
-    if (axis_angular_z_flip) vel.angular.z *= -1.0;
-  } 
   
-  //Trigger axes from /joy are defaulted to zero until the first trigger pull,
-  //This corrects the value initially to 1.0 as per the actual trigger position.
-  if (joy->axes[axis_linear_z] == 0.0 && correctTriggerLeft)
-    vel.linear.z = 1.0;
+  //CHECK FOR R3 PRESS
+  if (joy->buttons[Right_joy_button] == 1)
+  {
+    if(joy->buttons[Left_button]==1 && joy->buttons[Right_button]==1)	//check if LB&RB are depressed 
+    {
+      pose_reset_mode.data = Z_AND_YAW_RESET;      
+    }
+    else if(joy->buttons[Left_button]==1)			//if left button pressed 
+    {
+      pose_reset_mode.data = X_AND_Y_RESET;
+    }
+    else if(joy->buttons[Right_button]==1)			//if right button pressed 
+    {
+      pose_reset_mode.data = PITCH_AND_ROLL_RESET;
+    }
+    else
+    {
+      pose_reset_mode.data = ALL_RESET;
+    }    
+  }
   else
-    correctTriggerLeft = false;
-  
-  if (joy->axes[axis_angular_z] == 0.0 && correctTriggerRight)
-    vel.angular.z = 1.0;
-  else
-    correctTriggerRight = false;  
+  {
+    pose_reset_mode.data = NO_RESET;
+  }
+
+  // CHECK CONTROL MODE   
+  if (!autoNavigation) //Turn off all velocity and pose inputs from joystick if autoNavigation is on
+  {
+    if(joy->buttons[Left_button]==1 && joy->buttons[Right_button]==1)	//check if LB&RB are depressed 
+    {
+      vel.linear.x = joy->axes[axis_linear_x];
+      vel.linear.y = joy->axes[axis_linear_y];
+      vel.linear.z = joy->axes[axis_linear_z];
+      
+      vel.angular.x = 0.0;
+      vel.angular.y = 0.0;
+      vel.angular.z = joy->axes[axis_angular_z];
+      
+      pose.linear.x = 0.0;
+      pose.linear.y = 0.0;
+      pose.linear.z = joy->axes[axis_angular_y];
+      
+      pose.angular.x = 0.0;
+      pose.angular.y = 0.0;
+      pose.angular.z = joy->axes[axis_angular_x];      
+      
+      if (axis_linear_x_flip) vel.linear.x *= -1.0;
+      if (axis_linear_y_flip) vel.linear.y *= -1.0;
+      if (axis_linear_z_flip) vel.linear.z *= -1.0;
+      if (axis_angular_x_flip) pose.angular.x *= -1.0;
+      if (axis_angular_y_flip) pose.angular.y *= -1.0;
+      if (axis_angular_z_flip) vel.angular.z *= -1.0;
+    }
+    else if(joy->buttons[Left_button]==1)			//if left button pressed 
+    {
+      vel.linear.x = joy->axes[axis_linear_x];
+      vel.linear.y = joy->axes[axis_linear_y];
+      vel.linear.z = joy->axes[axis_linear_z];
+      
+      vel.angular.x = 0.0;
+      vel.angular.y = 0.0;
+      vel.angular.z = joy->axes[axis_angular_z];
+      
+      pose.linear.x = joy->axes[axis_angular_x];
+      pose.linear.y = joy->axes[axis_angular_y];
+      pose.linear.z = 0.0;
+      
+      pose.angular.x = 0.0;
+      pose.angular.y = 0.0;
+      pose.angular.z = 0.0;       
+
+      if (axis_linear_x_flip) vel.linear.x *= -1.0;
+      if (axis_linear_y_flip) vel.linear.y *= -1.0;
+      if (axis_linear_z_flip) vel.linear.z *= -1.0;
+      if (axis_angular_x_flip) pose.linear.x *= -1.0;
+      if (axis_angular_y_flip) pose.linear.y *= -1.0;
+      if (axis_angular_z_flip) vel.angular.z *= -1.0;
+    }
+    else if(joy->buttons[Right_button]==1)			//if right button pressed 
+    {    
+      vel.linear.x = joy->axes[axis_linear_x];
+      vel.linear.y = joy->axes[axis_linear_y];
+      vel.linear.z = joy->axes[axis_linear_z];
+      
+      vel.angular.x = 0.0;
+      vel.angular.y = 0.0;
+      vel.angular.z = joy->axes[axis_angular_z];
+      
+      pose.linear.x = 0.0;
+      pose.linear.y = 0.0;
+      pose.linear.z = 0.0;
+      
+      pose.angular.x = joy->axes[axis_angular_x];
+      pose.angular.y = joy->axes[axis_angular_y];
+      pose.angular.z = 0.0;       
+      
+      if (axis_linear_x_flip) vel.linear.x *= -1.0;
+      if (axis_linear_y_flip) vel.linear.y *= -1.0;
+      if (axis_linear_z_flip) vel.linear.z *= -1.0;
+      if (axis_angular_x_flip) pose.angular.x *= -1.0;
+      if (axis_angular_y_flip) pose.angular.y *= -1.0;
+      if (axis_angular_z_flip) vel.angular.z *= -1.0;
+    }    
+    else						//Proceed with normal control
+    {
+      vel.linear.x = joy->axes[axis_linear_x];
+      vel.linear.y = joy->axes[axis_linear_y];
+      vel.linear.z = joy->axes[axis_linear_z];
+      
+      vel.angular.x = joy->axes[axis_angular_x];
+      vel.angular.y = joy->axes[axis_angular_y];
+      vel.angular.z = joy->axes[axis_angular_z];
+      
+      pose.linear.x = 0.0;
+      pose.linear.y = 0.0;
+      pose.linear.z = 0.0;
+      
+      pose.angular.x = 0.0;
+      pose.angular.y = 0.0;
+      pose.angular.z = 0.0; 
+
+      if (axis_linear_x_flip) vel.linear.x *= -1.0;
+      if (axis_linear_y_flip) vel.linear.y *= -1.0;
+      if (axis_linear_z_flip) vel.linear.z *= -1.0;
+      if (axis_angular_x_flip) vel.angular.x *= -1.0;
+      if (axis_angular_y_flip) vel.angular.y *= -1.0;
+      if (axis_angular_z_flip) vel.angular.z *= -1.0;
+    } 
+    
+    //Trigger axes from /joy are defaulted to zero until the first trigger pull,
+    //This corrects the value initially to 1.0 as per the actual trigger position.
+    if (joy->axes[axis_linear_z] == 0.0 && correctTriggerLeft)
+      vel.linear.z = 1.0;
+    else
+      correctTriggerLeft = false;
+    
+    if (joy->axes[axis_angular_z] == 0.0 && correctTriggerRight)
+      vel.angular.z = 1.0;
+    else
+      correctTriggerRight = false;  
+  }
+} 
+
+void autoNavigationCallback(const geometry_msgs::Twist &twist)
+{
+  if (autoNavigation)
+  {
+    //Coordination frame remapping between autoNav and SHC
+    vel.linear.x = twist.linear.y;
+    vel.linear.y = twist.linear.x;
+    vel.angular.x = -twist.angular.z;
+  }
 }
 
 int main(int argc, char **argv)
@@ -465,7 +551,8 @@ int main(int argc, char **argv)
     // subscribe to published topic
     ros::Subscriber androidSensorSub = n.subscribe("android/sensor", 1, androidSensorCallback);
     ros::Subscriber androidJoySub = n.subscribe("android/joy", 1, androidJoyCallback);
-    ros::Subscriber joypadSub = n.subscribe("joy", 1, JoyCallback);
+    ros::Subscriber joypadSub = n.subscribe("joy", 1, joyCallback);
+    ros::Subscriber autoNavigationSub = n.subscribe("cmd_vel", 1, autoNavigationCallback);
     
     //setup publishers 
     //velocity publisher
@@ -481,14 +568,15 @@ int main(int argc, char **argv)
     ros::Publisher param_selection_pub = n.advertise<std_msgs::Int8>("hexapod_remote/param_selection", 1);
     ros::Publisher param_adjust_pub = n.advertise<std_msgs::Int8>("hexapod_remote/param_adjust", 1);
     ros::Publisher test_state_toggle_pub = n.advertise<std_msgs::Bool>("hexapod_remote/test_state_toggle", 1);
+    ros::Publisher pose_reset_pub = n.advertise<std_msgs::Int8>("hexapod_remote/pose_reset_mode", 1);
     
     //setup default variable values
     start_state.data = false;
 
     while(ros::ok())
-    {
-        //publish stuff
-        velocity_pub.publish(vel);
+    {      
+        //publish stuff      
+	velocity_pub.publish(vel);	
         pose_pub.publish(pose);
         start_state_pub.publish(start_state);
         gait_mode_pub.publish(gait_mode);
@@ -497,6 +585,8 @@ int main(int argc, char **argv)
 	test_state_toggle_pub.publish(test_state_toggle);
         param_selection_pub.publish(param_selection);
         param_adjust_pub.publish(param_adjust);
+	pose_reset_pub.publish(pose_reset_mode);
+	
         ros::spinOnce();
         loop_rate.sleep();
     }
