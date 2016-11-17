@@ -305,10 +305,10 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
   //CHECK FOR Y BUTTON PRESS
   if (joy->buttons[Y_button] == 1 && debounceY == true)
   {    
-    //leg_selection.data = (leg_selection.data+1)%6;
-    autoNavigation = !autoNavigation;
+    leg_selection.data = (leg_selection.data+1)%6;
+    /*autoNavigation = !autoNavigation;
     ROS_INFO_COND(autoNavigation, "Auto navigation mode started. All velocity and posing inputs from joypad are now off.");
-    ROS_INFO_COND(!autoNavigation, "Auto navigation mode ended. All velocity and posing inputs from joypad are now on.");
+    ROS_INFO_COND(!autoNavigation, "Auto navigation mode ended. All velocity and posing inputs from joypad are now on.");*/
     debounceY = false;
   }  
   else if (joy->buttons[Y_button] == 0)
