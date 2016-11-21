@@ -44,12 +44,12 @@ std_msgs::Int8 param_selection;
 std_msgs::Int8 param_adjust;
 std_msgs::Int8 pose_reset_mode;
 
-int axis_linear_x;
-int axis_linear_y;
-int axis_linear_z;
-int axis_angular_x;
-int axis_angular_y;
-int axis_angular_z;
+int primary_input_axis_x;
+int primary_input_axis_y;
+int primary_input_axis_z;
+int secondary_input_axis_x;
+int secondary_input_axis_y;
+int secondary_input_axis_z;
 
 int dpad_up_down;
 int dpad_left_right;
@@ -66,12 +66,12 @@ int Logitech_button;
 int Left_joy_button;
 int Right_joy_button;
 
-bool axis_linear_x_flip;
-bool axis_linear_y_flip;
-bool axis_linear_z_flip;
-bool axis_angular_x_flip;
-bool axis_angular_y_flip;
-bool axis_angular_z_flip;
+bool primary_input_axis_x_flip;
+bool primary_input_axis_y_flip;
+bool primary_input_axis_z_flip;
+bool secondary_input_axis_x_flip;
+bool secondary_input_axis_y_flip;
+bool secondary_input_axis_z_flip;
 
 bool compass_flip;
 bool imu_flip;
@@ -188,10 +188,10 @@ void androidSensorCallback(const hexapod_remote::androidSensor::ConstPtr& contro
     orientationX = 0 + round(control->orientation.x/90*sensitivity)/sensitivity;
     orientationY = 0 + round(control->orientation.y/90*sensitivity)/sensitivity;
     
-    if (axis_linear_x_flip) 
+    if (primary_input_axis_x_flip) 
       orientationX *= -1.0;
     
-    if (axis_linear_y_flip) 
+    if (primary_input_axis_y_flip) 
       orientationY *= -1.0;
     
     if (imu_flip)
@@ -370,88 +370,67 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
   {
     if(joy->buttons[Left_button]==1 && joy->buttons[Right_button]==1)	//check if LB&RB are depressed 
     {
-      vel.linear.x = joy->axes[axis_linear_x];
-      vel.linear.y = joy->axes[axis_linear_y];
-      vel.linear.z = joy->axes[axis_linear_z];
+      vel.linear.x = joy->axes[primary_input_axis_y];
+      vel.linear.y = joy->axes[primary_input_axis_x];
+      vel.linear.z = 0.0;
       
       vel.angular.x = 0.0;
       vel.angular.y = 0.0;
-      vel.angular.z = joy->axes[axis_angular_z];
+      vel.angular.z = 0.0;
       
       pose.linear.x = 0.0;
       pose.linear.y = 0.0;
-      pose.linear.z = joy->axes[axis_angular_y];
+      pose.linear.z = joy->axes[secondary_input_axis_y];
       
       pose.angular.x = 0.0;
       pose.angular.y = 0.0;
-      pose.angular.z = joy->axes[axis_angular_x];      
-      
-      if (axis_linear_x_flip) vel.linear.x *= -1.0;
-      if (axis_linear_y_flip) vel.linear.y *= -1.0;
-      if (axis_linear_z_flip) vel.linear.z *= -1.0;
-      if (axis_angular_x_flip) pose.angular.x *= -1.0;
-      if (axis_angular_y_flip) pose.angular.y *= -1.0;
-      if (axis_angular_z_flip) vel.angular.z *= -1.0;
+      pose.angular.z = joy->axes[secondary_input_axis_x];      
     }
     else if(joy->buttons[Left_button]==1)			//if left button pressed 
     {
-      vel.linear.x = joy->axes[axis_linear_x];
-      vel.linear.y = joy->axes[axis_linear_y];
-      vel.linear.z = joy->axes[axis_linear_z];
+      vel.linear.x = joy->axes[primary_input_axis_y];
+      vel.linear.y = joy->axes[primary_input_axis_x];
+      vel.linear.z = 0.0;
       
       vel.angular.x = 0.0;
       vel.angular.y = 0.0;
-      vel.angular.z = joy->axes[axis_angular_z];
+      vel.angular.z = 0.0;
       
-      pose.linear.x = joy->axes[axis_angular_x];
-      pose.linear.y = joy->axes[axis_angular_y];
+      pose.linear.x = joy->axes[secondary_input_axis_y];
+      pose.linear.y = joy->axes[secondary_input_axis_x];
       pose.linear.z = 0.0;
       
       pose.angular.x = 0.0;
       pose.angular.y = 0.0;
       pose.angular.z = 0.0;       
-
-      if (axis_linear_x_flip) vel.linear.x *= -1.0;
-      if (axis_linear_y_flip) vel.linear.y *= -1.0;
-      if (axis_linear_z_flip) vel.linear.z *= -1.0;
-      if (axis_angular_x_flip) pose.linear.x *= -1.0;
-      if (axis_angular_y_flip) pose.linear.y *= -1.0;
-      if (axis_angular_z_flip) vel.angular.z *= -1.0;
     }
     else if(joy->buttons[Right_button]==1)			//if right button pressed 
     {    
-      vel.linear.x = joy->axes[axis_linear_x];
-      vel.linear.y = joy->axes[axis_linear_y];
-      vel.linear.z = joy->axes[axis_linear_z];
+      vel.linear.x = joy->axes[primary_input_axis_y];
+      vel.linear.y = joy->axes[primary_input_axis_x];
+      vel.linear.z = 0.0;
       
       vel.angular.x = 0.0;
       vel.angular.y = 0.0;
-      vel.angular.z = joy->axes[axis_angular_z];
+      vel.angular.z = 0.0;
       
       pose.linear.x = 0.0;
       pose.linear.y = 0.0;
       pose.linear.z = 0.0;
       
-      pose.angular.x = joy->axes[axis_angular_x];
-      pose.angular.y = joy->axes[axis_angular_y];
+      pose.angular.x = -joy->axes[secondary_input_axis_x];
+      pose.angular.y = joy->axes[secondary_input_axis_y];
       pose.angular.z = 0.0;       
-      
-      if (axis_linear_x_flip) vel.linear.x *= -1.0;
-      if (axis_linear_y_flip) vel.linear.y *= -1.0;
-      if (axis_linear_z_flip) vel.linear.z *= -1.0;
-      if (axis_angular_x_flip) pose.angular.x *= -1.0;
-      if (axis_angular_y_flip) pose.angular.y *= -1.0;
-      if (axis_angular_z_flip) vel.angular.z *= -1.0;
     }    
     else						//Proceed with normal control
     {
-      vel.linear.x = joy->axes[axis_linear_x];
-      vel.linear.y = joy->axes[axis_linear_y];
-      vel.linear.z = joy->axes[axis_linear_z];
+      vel.linear.x = joy->axes[primary_input_axis_y];
+      vel.linear.y = joy->axes[primary_input_axis_x];
+      vel.linear.z = 0.0;
       
-      vel.angular.x = joy->axes[axis_angular_x];
-      vel.angular.y = joy->axes[axis_angular_y];
-      vel.angular.z = joy->axes[axis_angular_z];
+      vel.angular.x = 0.0;
+      vel.angular.y = 0.0;
+      vel.angular.z = -joy->axes[secondary_input_axis_x];
       
       pose.linear.x = 0.0;
       pose.linear.y = 0.0;
@@ -460,26 +439,28 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
       pose.angular.x = 0.0;
       pose.angular.y = 0.0;
       pose.angular.z = 0.0; 
-
-      if (axis_linear_x_flip) vel.linear.x *= -1.0;
-      if (axis_linear_y_flip) vel.linear.y *= -1.0;
-      if (axis_linear_z_flip) vel.linear.z *= -1.0;
-      if (axis_angular_x_flip) vel.angular.x *= -1.0;
-      if (axis_angular_y_flip) vel.angular.y *= -1.0;
-      if (axis_angular_z_flip) vel.angular.z *= -1.0;
     } 
+    
+    if (primary_input_axis_x_flip) vel.linear.x *= -1.0;
+    if (primary_input_axis_y_flip) vel.linear.y *= -1.0;
+    if (primary_input_axis_z_flip) vel.linear.z *= -1.0;
+    if (secondary_input_axis_x_flip) pose.angular.x *= -1.0;
+    if (secondary_input_axis_y_flip) pose.angular.y *= -1.0;
+    if (secondary_input_axis_z_flip) vel.angular.z *= -1.0;
     
     //Trigger axes from /joy are defaulted to zero until the first trigger pull,
     //This corrects the value initially to 1.0 as per the actual trigger position.
-    if (joy->axes[axis_linear_z] == 0.0 && correctTriggerLeft)
+    /*
+    if (joy->axes[primary_input_axis_z] == 0.0 && correctTriggerLeft)
       vel.linear.z = 1.0;
     else
       correctTriggerLeft = false;
     
-    if (joy->axes[axis_angular_z] == 0.0 && correctTriggerRight)
+    if (joy->axes[secondary_input_axis_z] == 0.0 && correctTriggerRight)
       vel.angular.z = 1.0;
     else
       correctTriggerRight = false;  
+    */
   }
 } 
 
@@ -508,12 +489,12 @@ int main(int argc, char **argv)
     param_adjust.data = 0;
 
     // get and set parameter defaults if parameters arn't on the param server  
-    n.param("hexapod_remote/axis_linear_x", axis_linear_x, 0);
-    n.param("hexapod_remote/axis_linear_y", axis_linear_y, 1);
-    n.param("hexapod_remote/axis_linear_z", axis_linear_z, 2);
-    n.param("hexapod_remote/axis_angular_x", axis_angular_x, 3);
-    n.param("hexapod_remote/axis_angular_y", axis_angular_y, 4);
-    n.param("hexapod_remote/axis_angular_z", axis_angular_z, 5);
+    n.param("hexapod_remote/primary_input_axis_x", primary_input_axis_x, 0);
+    n.param("hexapod_remote/primary_input_axis_y", primary_input_axis_y, 1);
+    n.param("hexapod_remote/primary_input_axis_z", primary_input_axis_z, 2);
+    n.param("hexapod_remote/secondary_input_axis_x", secondary_input_axis_x, 3);
+    n.param("hexapod_remote/secondary_input_axis_y", secondary_input_axis_y, 4);
+    n.param("hexapod_remote/secondary_input_axis_z", secondary_input_axis_z, 5);
     
     n.param("hexapod_remote/dpad_left_right", dpad_left_right, 6);
     n.param("hexapod_remote/dpad_up_down", dpad_up_down, 7); 
@@ -531,12 +512,12 @@ int main(int argc, char **argv)
     n.param("hexapod_remote/Left_joy_button", Left_joy_button, 9);
     n.param("hexapod_remote/Right_joy_button", Right_joy_button, 10);    
 
-    n.param("hexapod_remote/axis_linear_x_flip", axis_linear_x_flip, true);
-    n.param("hexapod_remote/axis_linear_y_flip", axis_linear_y_flip, false);
-    n.param("hexapod_remote/axis_linear_z_flip", axis_linear_z_flip, false);
-    n.param("hexapod_remote/axis_angular_x_flip", axis_angular_x_flip, true); 
-    n.param("hexapod_remote/axis_angular_y_flip", axis_angular_y_flip, false);
-    n.param("hexapod_remote/axis_angular_z_flip", axis_angular_z_flip, false);
+    n.param("hexapod_remote/primary_input_axis_x_flip", primary_input_axis_x_flip, false);
+    n.param("hexapod_remote/primary_input_axis_y_flip", primary_input_axis_y_flip, false);
+    n.param("hexapod_remote/primary_input_axis_z_flip", primary_input_axis_z_flip, false);
+    n.param("hexapod_remote/secondary_input_axis_x_flip", secondary_input_axis_x_flip, false); 
+    n.param("hexapod_remote/secondary_input_axis_y_flip", secondary_input_axis_y_flip, false);
+    n.param("hexapod_remote/secondary_input_axis_z_flip", secondary_input_axis_z_flip, false);
 
     n.param("hexapod_remote/sensitivity", sensitivity, 10);
     n.param("hexapod_remote/pub_rate",pub_rate, 50);
