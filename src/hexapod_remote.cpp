@@ -374,8 +374,8 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
       vel.linear.y = joy->axes[primary_input_axis_x];
       vel.linear.z = 0.0;
       
-      vel.angular.x = 0.0;
-      vel.angular.y = 0.0;
+      vel.angular.x = joy->axes[secondary_input_axis_y];
+      vel.angular.y = joy->axes[secondary_input_axis_x];
       vel.angular.z = 0.0;
       
       pose.linear.x = 0.0;
@@ -392,8 +392,8 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
       vel.linear.y = joy->axes[primary_input_axis_x];
       vel.linear.z = 0.0;
       
-      vel.angular.x = 0.0;
-      vel.angular.y = 0.0;
+      vel.angular.x = joy->axes[secondary_input_axis_y];
+      vel.angular.y = joy->axes[secondary_input_axis_x];
       vel.angular.z = 0.0;
       
       pose.linear.x = joy->axes[secondary_input_axis_y];
@@ -410,8 +410,8 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
       vel.linear.y = joy->axes[primary_input_axis_x];
       vel.linear.z = 0.0;
       
-      vel.angular.x = 0.0;
-      vel.angular.y = 0.0;
+      vel.angular.x = joy->axes[secondary_input_axis_y];
+      vel.angular.y = joy->axes[secondary_input_axis_x];
       vel.angular.z = 0.0;
       
       pose.linear.x = 0.0;
@@ -428,8 +428,8 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
       vel.linear.y = joy->axes[primary_input_axis_x];
       vel.linear.z = 0.0;
       
-      vel.angular.x = 0.0;
-      vel.angular.y = 0.0;
+      vel.angular.x = joy->axes[secondary_input_axis_y];
+      vel.angular.y = joy->axes[secondary_input_axis_x];
       vel.angular.z = -joy->axes[secondary_input_axis_x];
       
       pose.linear.x = 0.0;
