@@ -1,9 +1,16 @@
 Header header
-geometry_msgs/Point leftJoy
-geometry_msgs/Point rightJoy
-std_msgs/Bool start
-std_msgs/Int8 mode
-std_msgs/Int8 gait
-std_msgs/Int8 paramSelection
-std_msgs/Int8 paramAdjust
+geometry_msgs/Point primaryControlAxis
+geometry_msgs/Point secondaryControlAxis
+std_msgs/Int8 systemState
+std_msgs/Int8 gaitSelection
+std_msgs/Int8 posingMode
+std_msgs/Int8 cruiseControlMode
+std_msgs/Int8 autoNavigationMode
+std_msgs/Int8 poseResetMode
+std_msgs/Int8 parameterSelection
+std_msgs/Int8 parameterAdjustment
+std_msgs/Int8 primaryLegSelection
+std_msgs/Int8 secondaryLegSelection
+std_msgs/Int8 primaryLegState
+std_msgs/Int8 secondaryLegState
 
