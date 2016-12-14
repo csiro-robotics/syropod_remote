@@ -29,13 +29,13 @@ enum SystemState
   RUNNING,
 };
 
-enum GaitSelection
+enum GaitDesignation
 {
   WAVE_GAIT,
   AMBLE_GAIT,
   RIPPLE_GAIT,
   TRIPOD_GAIT,
-  UNDEFINED = -1,
+  GAIT_UNDESIGNATED = -1,
 };
 
 enum PosingMode
@@ -82,13 +82,13 @@ enum ParameterSelection
 
 enum LegSelection
 {
-  NO_LEG_SELECTION,
   FRONT_LEFT,
   FRONT_RIGHT,
   MIDDLE_LEFT,
   MIDDLE_RIGHT,
   REAR_LEFT,
-  REAR_RIGHT,  
+  REAR_RIGHT, 
+  LEG_UNDESIGNATED,
 };
 
 enum LegState
@@ -99,13 +99,13 @@ enum LegState
 
 //Modes/status'
 SystemState systemState = OFF;
-GaitSelection gaitSelection = UNDEFINED;
+GaitDesignation gaitSelection = GAIT_UNDESIGNATED;
 PosingMode posingMode = NO_POSING;
 CruiseControlMode cruiseControlMode = CRUISE_CONTROL_OFF;
 AutoNavigationMode autoNavigationMode = AUTO_NAVIGATION_OFF;
 ParameterSelection parameterSelection = NO_PARAMETER_SELECTION;
-LegSelection primaryLegSelection = NO_LEG_SELECTION;
-LegSelection secondaryLegSelection = NO_LEG_SELECTION;
+LegSelection primaryLegSelection = LEG_UNDESIGNATED;
+LegSelection secondaryLegSelection = LEG_UNDESIGNATED;
 LegState primaryLegState = WALKING;
 LegState secondaryLegState = WALKING;
 PoseResetMode poseResetMode = NO_RESET;
@@ -232,7 +232,7 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
   if (joy->buttons[buttonA] && debounceA)
   {    
     int nextGaitSelection = (static_cast<int>(gaitSelection)+1)%NUM_GAIT_SELECTIONS;
-    gaitSelection = static_cast<GaitSelection>(nextGaitSelection);
+    gaitSelection = static_cast<GaitDesignation>(nextGaitSelection);
     debounceA = false;
   }  
   else if (!joy->buttons[buttonA])
@@ -270,6 +270,9 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
     int nextAutoNavigationMode = (static_cast<int>(autoNavigationMode)+1)%NUM_AUTO_NAVIGATION_MODES;
     autoNavigationMode = static_cast<AutoNavigationMode>(nextAutoNavigationMode);
     debounceY = false;
+    bodyVelocityMsg.linear.x = 0.0;
+    bodyVelocityMsg.linear.y = 0.0;
+    bodyVelocityMsg.angular.z = 0.0;
   }  
   else if (!joy->buttons[buttonY])
   {
@@ -354,7 +357,7 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
   ***********************************************************************************************************************/
   
   //On L3 button press, cycle primary leg state of selected leg
-  if (primaryLegSelection != NO_LEG_SELECTION)
+  if (primaryLegSelection != LEG_UNDESIGNATED)
   {
     if (joy->buttons[joyButtonLeft] && debounceJoyLeft)
     {
@@ -391,7 +394,7 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
   }
   
   //On R3 button press, cycle primary leg state of selected leg
-  if (secondaryLegSelection != NO_LEG_SELECTION)
+  if (secondaryLegSelection != LEG_UNDESIGNATED)
   {
     if (joy->buttons[joyButtonRight] && debounceJoyRight)
     {
@@ -551,7 +554,7 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 void androidJoyCallback(const hexapod_remote::androidJoy::ConstPtr& control)
 {
   systemState = static_cast<SystemState>(control->systemState.data);
-  gaitSelection = static_cast<GaitSelection>(control->gaitSelection.data);
+  gaitSelection = static_cast<GaitDesignation>(control->gaitSelection.data);
   posingMode = static_cast<PosingMode>(control->posingMode.data);
   cruiseControlMode = static_cast<CruiseControlMode>(control->cruiseControlMode.data);
   autoNavigationMode = static_cast<AutoNavigationMode>(control->autoNavigationMode.data);
@@ -759,8 +762,8 @@ void autoNavigationCallback(const geometry_msgs::Twist &twist)
   {
     //Coordination frame remapping between autoNav and SHC
     bodyVelocityMsg.linear.x = twist.linear.x;
-    bodyVelocityMsg.linear.y = -twist.linear.y;
-    bodyVelocityMsg.angular.z = -twist.angular.z;
+    bodyVelocityMsg.linear.y = twist.linear.y;
+    bodyVelocityMsg.angular.z = twist.angular.z;
   }
 }
 
@@ -824,7 +827,7 @@ int main(int argc, char **argv)
   ros::Subscriber androidSensorSub = n.subscribe("android/sensor", 1, androidSensorCallback);
   ros::Subscriber androidJoySub = n.subscribe("android/joy", 1, androidJoyCallback);
   ros::Subscriber joypadSub = n.subscribe("joy", 1, joyCallback);
-  ros::Subscriber autoNavigationSub = n.subscribe("cmd_vel", 1, autoNavigationCallback);
+  ros::Subscriber autoNavigationSub = n.subscribe("hexapod_auto_navigation/desired_velocity", 1, autoNavigationCallback);
   
   //Setup publishers 
   ros::Publisher bodyVelocityPublisher = n.advertise<geometry_msgs::Twist>("hexapod_remote/desired_velocity",1);
