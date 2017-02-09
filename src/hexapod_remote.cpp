@@ -18,7 +18,7 @@
 #define NUM_CRUISE_CONTROL_MODES 2
 #define NUM_AUTO_NAVIGATION_MODES 2
 #define NUM_PARAMETER_SELECTIONS 9
-#define NUM_LEG_SELECTIONS 7
+#define NUM_LEGS 6
 #define NUM_LEG_STATES 2
 
 enum SystemState
@@ -82,13 +82,15 @@ enum ParameterSelection
 
 enum LegSelection
 {
-  FRONT_LEFT,
-  FRONT_RIGHT,
-  MIDDLE_LEFT,
-  MIDDLE_RIGHT,
-  REAR_LEFT,
-  REAR_RIGHT, 
-  LEG_UNDESIGNATED,
+  LEG_0,
+  LEG_1,
+  LEG_2,
+  LEG_3,
+  LEG_4,
+  LEG_5,
+  LEG_6,
+  LEG_7,
+  LEG_UNDESIGNATED = -1,
 };
 
 enum LegState
@@ -308,12 +310,21 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
   {
     if (joy->buttons[bumperLeft] && debounceBumperLeft)
     {
-      int nextPrimaryLegSelection = (static_cast<int>(primaryLegSelection)+1)%NUM_LEG_SELECTIONS;
+      int nextPrimaryLegSelection = (static_cast<int>(primaryLegSelection)+1)%(NUM_LEGS+1);
       if (nextPrimaryLegSelection == static_cast<int>(secondaryLegSelection) && secondaryLegState == MANUAL)
       {
-	nextPrimaryLegSelection = (static_cast<int>(secondaryLegSelection)+1)%NUM_LEG_SELECTIONS;
+	nextPrimaryLegSelection = (static_cast<int>(secondaryLegSelection)+1)%(NUM_LEGS+1);
       }
-      primaryLegSelection = static_cast<LegSelection>(nextPrimaryLegSelection);
+      
+      if (nextPrimaryLegSelection < NUM_LEGS)
+      {
+	primaryLegSelection = static_cast<LegSelection>(nextPrimaryLegSelection);
+      }
+      else
+      {
+	primaryLegSelection = LEG_UNDESIGNATED;
+      }
+      
       debounceBumperLeft = false;
     }
     else if (!joy->buttons[bumperLeft])
@@ -332,12 +343,21 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
   {     
     if (joy->buttons[bumperRight] && debounceBumperRight)
     {
-      int nextSecondaryLegSelection = (static_cast<int>(secondaryLegSelection)+1)%NUM_LEG_SELECTIONS;
+      int nextSecondaryLegSelection = (static_cast<int>(secondaryLegSelection)+1)%(NUM_LEGS+1);
       if (nextSecondaryLegSelection == static_cast<int>(primaryLegSelection) && primaryLegState == MANUAL)
       {
-	nextSecondaryLegSelection = (static_cast<int>(primaryLegSelection)+1)%NUM_LEG_SELECTIONS;
+	nextSecondaryLegSelection = (static_cast<int>(primaryLegSelection)+1)%(NUM_LEGS+1);
       }
-      secondaryLegSelection = static_cast<LegSelection>(nextSecondaryLegSelection);
+      
+      if (nextSecondaryLegSelection < NUM_LEGS)
+      {
+	secondaryLegSelection = static_cast<LegSelection>(nextSecondaryLegSelection);
+      }
+      else
+      {
+	secondaryLegSelection = LEG_UNDESIGNATED;
+      }
+      
       debounceBumperRight = false;
     }
     else if (!joy->buttons[bumperRight])
@@ -366,7 +386,7 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
       //If 2nd leg selection same as 1st whilst 1st is toggling state, then iterate 2nd leg selection
       if (secondaryLegSelection == primaryLegSelection) 
       {
-	int nextSecondaryLegSelection = (static_cast<int>(primaryLegSelection)+1)%NUM_LEG_SELECTIONS;
+	int nextSecondaryLegSelection = (static_cast<int>(primaryLegSelection)+1)%(NUM_LEGS);
 	secondaryLegSelection = static_cast<LegSelection>(nextSecondaryLegSelection);
       }
       debounceJoyLeft = false;
@@ -403,7 +423,7 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
       //If 1st leg selection same as 2nd whilst 2ndst is toggling state, then iterate 1st leg selection
       if (secondaryLegSelection == primaryLegSelection) 
       {
-	int nextPrimaryLegSelection = (static_cast<int>(secondaryLegSelection)+1)%NUM_LEG_SELECTIONS;
+	int nextPrimaryLegSelection = (static_cast<int>(secondaryLegSelection)+1)%(NUM_LEGS);
 	primaryLegSelection = static_cast<LegSelection>(nextPrimaryLegSelection);
       }
       debounceJoyRight = false;
