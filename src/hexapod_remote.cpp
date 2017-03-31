@@ -12,21 +12,29 @@
 #define ROTATE_CLOCKWISE -1.0
 #define ROTATE_COUNTERCLOCKWISE 1.0
 
-#define NUM_SYSTEM_STATES 4
+#define NUM_SYSTEM_STATES 2
+#define NUM_ROBOT_STATES 4
 #define NUM_GAIT_SELECTIONS 4
 #define NUM_POSING_MODES 4
 #define NUM_CRUISE_CONTROL_MODES 2
 #define NUM_AUTO_NAVIGATION_MODES 2
 #define NUM_PARAMETER_SELECTIONS 9
-#define NUM_LEGS 6
 #define NUM_LEG_STATES 2
+
 
 enum SystemState
 {
-  OFF,
+	SUSPENDED,
+	OPERATIONAL,
+};
+
+enum RobotState 
+{
+	OFF,
   PACKED,
   READY,
   RUNNING,
+	UNKNOWN = -1,
 };
 
 enum GaitDesignation
@@ -100,7 +108,8 @@ enum LegState
 };
 
 //Modes/status'
-SystemState systemState = OFF;
+SystemState systemState = SUSPENDED;
+RobotState robotState = UNKNOWN;
 GaitDesignation gaitSelection = GAIT_UNDESIGNATED;
 PosingMode posingMode = NO_POSING;
 CruiseControlMode cruiseControlMode = CRUISE_CONTROL_OFF;
@@ -112,6 +121,8 @@ LegState primaryLegState = WALKING;
 LegState secondaryLegState = WALKING;
 PoseResetMode poseResetMode = NO_RESET;
 
+int num_legs = 6; //default 6
+
 bool manualPrimaryZInvert = false;
 bool manualSecondaryZInvert = false;
 
@@ -122,6 +133,7 @@ geometry_msgs::Point primaryTipVelocityMsg;
 geometry_msgs::Point secondaryTipVelocityMsg;
 
 std_msgs::Int8 systemStateMsg;
+std_msgs::Int8 robotStateMsg;
 std_msgs::Int8 gaitSelectionMsg;
 std_msgs::Int8 posingModeMsg;
 std_msgs::Int8 cruiseControlModeMsg;
@@ -135,20 +147,20 @@ std_msgs::Int8 parameterSelectionMsg;
 std_msgs::Int8 parameterAdjustmentMsg;
 
 //Message indices for input axes (joystick left/right)
-int primaryInputAxisX;
-int primaryInputAxisY;
-int primaryInputAxisZ;
-int secondaryInputAxisX;
-int secondaryInputAxisY;
-int secondaryInputAxisZ;
+int primaryInputAxisX = 0;
+int primaryInputAxisY = 0;
+int primaryInputAxisZ = 0;
+int secondaryInputAxisX = 0;
+int secondaryInputAxisY = 0;
+int secondaryInputAxisZ = 0;
 
 //Message indices for dpad axes
-int dPadUpDown;
-int dPadLeftRight;
+int dPadUpDown = 0;
+int dPadLeftRight = 0;
 
 //Message indices for face Buttons
-int buttonA;
-int buttonB;
+int buttonA = 0;
+int buttonB = 0;
 int buttonX;
 int buttonY;
 
@@ -174,6 +186,7 @@ bool invertSecondaryAxisY;
 bool invertSecondaryAxisZ;
 
 //Debounce booleans for buttons
+bool debounceLogitech = true;
 bool debounceStart = true;
 bool debounceBack = true;
 bool debounceA = true;
@@ -200,14 +213,34 @@ int parameterAdjustmentSensitivity;
 ***********************************************************************************************************************/
 void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
+	/***********************************************************************************************************************
+    * Logitech button
+  ***********************************************************************************************************************/
+	if (joy->buttons[logitechButton] && debounceLogitech)
+	{
+		int nextSystemState = (static_cast<int>(systemState)+1)%NUM_SYSTEM_STATES;
+		systemState = static_cast<SystemState>(nextSystemState);
+		debounceLogitech = false;
+	}
+	else if (!joy->buttons[logitechButton])
+	{
+		debounceLogitech = true;
+	}
+	
+	// Prevent state changes is system is suspended
+	if (systemState == SUSPENDED)
+	{
+		return;
+	}
+
   /***********************************************************************************************************************
     * Start/Back buttons
   ***********************************************************************************************************************/
   //On Start button press, iterate system state forward
   if (joy->buttons[startButton] && debounceStart) //Start button
   {
-    int nextSystemState = std::min((static_cast<int>(systemState)+1), NUM_SYSTEM_STATES-1);
-    systemState = static_cast<SystemState>(nextSystemState);
+    int nextRobotState = std::min((static_cast<int>(robotState)+1), NUM_ROBOT_STATES-1);
+    robotState = static_cast<RobotState>(nextRobotState);
     debounceStart = false;
   }
   else if (!joy->buttons[startButton])
@@ -218,8 +251,8 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
   //On Back button press, iterate system state backward
   if (joy->buttons[backButton] && debounceBack) //Back button
   {
-    int nextSystemState = std::max((static_cast<int>(systemState)-1), 0);
-    systemState = static_cast<SystemState>(nextSystemState);
+    int nextRobotState = std::max((static_cast<int>(robotState)-1), 0);
+    robotState = static_cast<RobotState>(nextRobotState);
     debounceBack = false;
   }	
   else if (!joy->buttons[backButton])
@@ -245,8 +278,12 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
   //Cycle posing mode on B button press
   if (joy->buttons[buttonB] && debounceB)
   {
-    int nextPosingMode = (static_cast<int>(posingMode)+1)%NUM_POSING_MODES;
+    int nextPosingMode = (static_cast<int>(posingMode)+1)%NUM_POSING_MODES;		
     posingMode = static_cast<PosingMode>(nextPosingMode);
+		if (secondaryLegState != MANUAL)
+		{
+			secondaryLegSelection = LEG_UNDESIGNATED;
+		}
     debounceB = false;
   }
   else if (!joy->buttons[buttonB])
@@ -310,13 +347,13 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
   {
     if (joy->buttons[bumperLeft] && debounceBumperLeft)
     {
-      int nextPrimaryLegSelection = (static_cast<int>(primaryLegSelection)+1)%(NUM_LEGS+1);
+      int nextPrimaryLegSelection = (static_cast<int>(primaryLegSelection)+1)%(num_legs+1);
       if (nextPrimaryLegSelection == static_cast<int>(secondaryLegSelection) && secondaryLegState == MANUAL)
       {
-	nextPrimaryLegSelection = (static_cast<int>(secondaryLegSelection)+1)%(NUM_LEGS+1);
+	nextPrimaryLegSelection = (static_cast<int>(secondaryLegSelection)+1)%(num_legs+1);
       }
       
-      if (nextPrimaryLegSelection < NUM_LEGS)
+      if (nextPrimaryLegSelection < num_legs)
       {
 	primaryLegSelection = static_cast<LegSelection>(nextPrimaryLegSelection);
       }
@@ -343,13 +380,13 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
   {     
     if (joy->buttons[bumperRight] && debounceBumperRight)
     {
-      int nextSecondaryLegSelection = (static_cast<int>(secondaryLegSelection)+1)%(NUM_LEGS+1);
+      int nextSecondaryLegSelection = (static_cast<int>(secondaryLegSelection)+1)%(num_legs+1);
       if (nextSecondaryLegSelection == static_cast<int>(primaryLegSelection) && primaryLegState == MANUAL)
       {
-	nextSecondaryLegSelection = (static_cast<int>(primaryLegSelection)+1)%(NUM_LEGS+1);
+	nextSecondaryLegSelection = (static_cast<int>(primaryLegSelection)+1)%(num_legs+1);
       }
       
-      if (nextSecondaryLegSelection < NUM_LEGS)
+      if (nextSecondaryLegSelection < num_legs)
       {
 	secondaryLegSelection = static_cast<LegSelection>(nextSecondaryLegSelection);
       }
@@ -386,7 +423,7 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
       //If 2nd leg selection same as 1st whilst 1st is toggling state, then iterate 2nd leg selection
       if (secondaryLegSelection == primaryLegSelection) 
       {
-	int nextSecondaryLegSelection = (static_cast<int>(primaryLegSelection)+1)%(NUM_LEGS);
+	int nextSecondaryLegSelection = (static_cast<int>(primaryLegSelection)+1)%(num_legs);
 	secondaryLegSelection = static_cast<LegSelection>(nextSecondaryLegSelection);
       }
       debounceJoyLeft = false;
@@ -423,7 +460,7 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
       //If 1st leg selection same as 2nd whilst 2ndst is toggling state, then iterate 1st leg selection
       if (secondaryLegSelection == primaryLegSelection) 
       {
-	int nextPrimaryLegSelection = (static_cast<int>(secondaryLegSelection)+1)%(NUM_LEGS);
+	int nextPrimaryLegSelection = (static_cast<int>(secondaryLegSelection)+1)%(num_legs);
 	primaryLegSelection = static_cast<LegSelection>(nextPrimaryLegSelection);
       }
       debounceJoyRight = false;
@@ -432,6 +469,7 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
     {
       debounceJoyRight = true;
     }
+    posingMode = NO_POSING;
   }
   //On R3 button press, if no leg is currently selected, set pose reset mode depending on current posing mode instead
   else 
@@ -838,7 +876,16 @@ int main(int argc, char **argv)
   n.param("hexapod_remote/compass_flip",invertCompass, true);
   n.param("hexapod_remote/imu_flip", invertImu, true);
   n.param("hexapod_remote/param_adjust_sensitivity", parameterAdjustmentSensitivity, 10);
-  
+	
+	std::vector<std::string> leg_id_array;
+	if (!n.getParam("/hexapod/parameters/leg_id", leg_id_array))
+	{
+		ROS_ERROR("Error reading parameter/s leg_id from rosparam. Check config file is loaded and type is correct\n");
+	}
+	else 
+	{
+		num_legs = leg_id_array.size();
+	}
 
   //Setup publish loop_rate 
   ros::Rate loopRate(publishRate);
@@ -856,7 +903,8 @@ int main(int argc, char **argv)
   ros::Publisher secondaryTipVelocityPublisher = n.advertise<geometry_msgs::Point>("hexapod_remote/secondary_tip_velocity",1);
   
   //Status publishers
-  ros::Publisher systemStatePublisher = n.advertise<std_msgs::Int8>("hexapod_remote/system_state", 1);  
+  ros::Publisher systemStatePublisher = n.advertise<std_msgs::Int8>("hexapod_remote/system_state", 1);
+	ros::Publisher robotStatePublisher = n.advertise<std_msgs::Int8>("hexapod_remote/robot_state", 1);
   ros::Publisher gaitSelectionPublisher = n.advertise<std_msgs::Int8>("hexapod_remote/gait_selection", 1);
   ros::Publisher posingModePublisher = n.advertise<std_msgs::Int8>("hexapod_remote/posing_mode", 1);
   ros::Publisher cruiseControlPublisher = n.advertise<std_msgs::Int8>("hexapod_remote/cruise_control_mode", 1);
@@ -868,11 +916,32 @@ int main(int argc, char **argv)
   ros::Publisher parameterSelectionPublisher = n.advertise<std_msgs::Int8>("hexapod_remote/parameter_selection", 1);
   ros::Publisher parameterAdjustmentPublisher = n.advertise<std_msgs::Int8>("hexapod_remote/parameter_adjustment", 1);  
   ros::Publisher poseResetPublisher = n.advertise<std_msgs::Int8>("hexapod_remote/pose_reset_mode", 1);
+	
+	//Init message values
+	bodyVelocityMsg.linear.x = 0.0;
+	bodyVelocityMsg.linear.y = 0.0;
+	bodyVelocityMsg.linear.z = 0.0;
+	bodyVelocityMsg.angular.x = 0.0;
+	bodyVelocityMsg.angular.y = 0.0;
+	bodyVelocityMsg.angular.z = 0.0;
+	poseMsg.linear.x = 0.0;
+	poseMsg.linear.y = 0.0;
+	poseMsg.linear.z = 0.0;	
+	poseMsg.angular.x = 0.0;
+	poseMsg.angular.y = 0.0;
+	poseMsg.angular.z = 0.0; 
+	primaryTipVelocityMsg.x = 0.0;
+	primaryTipVelocityMsg.y = 0.0;
+	primaryTipVelocityMsg.z = 0.0;
+	secondaryTipVelocityMsg.x = 0.0;
+	secondaryTipVelocityMsg.y = 0.0;
+	secondaryTipVelocityMsg.z = 0.0;
 
   while(ros::ok())
   {      
     //Assign message values
     systemStateMsg.data = static_cast<int>(systemState);
+		robotStateMsg.data = static_cast<int>(robotState);
     gaitSelectionMsg.data = static_cast<int>(gaitSelection);
     posingModeMsg.data = static_cast<int>(posingMode);
     cruiseControlModeMsg.data = static_cast<int>(cruiseControlMode);
@@ -885,7 +954,8 @@ int main(int argc, char **argv)
     poseResetModeMsg.data = static_cast<int>(poseResetMode);
     
     //Publish messages   
-    systemStatePublisher.publish(systemStateMsg);  
+    systemStatePublisher.publish(systemStateMsg);
+		robotStatePublisher.publish(robotStateMsg);
     bodyVelocityPublisher.publish(bodyVelocityMsg);	
     posePublisher.publish(poseMsg);
     primaryTipVelocityPublisher.publish(primaryTipVelocityMsg);
