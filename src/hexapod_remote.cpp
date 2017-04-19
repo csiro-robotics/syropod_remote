@@ -1,4 +1,5 @@
 #include "ros/ros.h"
+#include "ros/package.h"
 #include "std_msgs/Bool.h"
 #include "geometry_msgs/Twist.h"
 #include "geometry_msgs/Point.h"
@@ -121,6 +122,7 @@ LegState primaryLegState = WALKING;
 LegState secondaryLegState = WALKING;
 PoseResetMode poseResetMode = NO_RESET;
 
+std::string hexapod_type;
 int num_legs = 6; //default 6
 
 bool manualPrimaryZInvert = false;
@@ -207,6 +209,7 @@ bool correctPrimaryTrigger = true;
 bool correctSecondaryTrigger = true;
 int imuSensitivity;
 int parameterAdjustmentSensitivity;
+int konamiCode = 0;
 
 /***********************************************************************************************************************
   * Joy callback
@@ -223,15 +226,40 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 		debounceLogitech = false;
 	}
 	else if (!joy->buttons[logitechButton])
-	{
+	{		
 		debounceLogitech = true;
 	}
 	
-	// Prevent state changes is system is suspended
+	/***********************************************************************************************************************
+    * Prevent state changes if system is suspended + Konami Code (Approved by Alberto)
+  ***********************************************************************************************************************/
 	if (systemState == SUSPENDED)
 	{
+		if ((konamiCode == 0 && joy->axes[dPadUpDown] == 1) ||
+			  (konamiCode == 1 && joy->axes[dPadUpDown] == 1) ||
+				(konamiCode == 2 && joy->axes[dPadUpDown] == -1) ||
+				(konamiCode == 3 && joy->axes[dPadUpDown] == -1) ||
+				(konamiCode == 4 && joy->axes[dPadLeftRight] == 1) ||
+				(konamiCode == 5 && joy->axes[dPadLeftRight] == -1) ||
+				(konamiCode == 6 && joy->axes[dPadLeftRight] == 1) ||
+				(konamiCode == 7 && joy->axes[dPadLeftRight] == -1) ||
+				(konamiCode == 8 && joy->buttons[buttonB] == 1) ||
+				(konamiCode == 9 && joy->buttons[buttonA] == 1))
+		{
+			konamiCode++;
+		}
+		else if (konamiCode == 10)
+		{
+			std::string command_string = "play " + ros::package::getPath(hexapod_type + "_syropod") + "/.easter_egg.mp3 -q";
+			system(command_string.c_str());
+			konamiCode = 0;
+		}
 		return;
 	}
+	else
+	{
+		konamiCode = 0;
+	}	
 
   /***********************************************************************************************************************
     * Start/Back buttons
@@ -885,6 +913,12 @@ int main(int argc, char **argv)
 	else 
 	{
 		num_legs = leg_id_array.size();
+	}	
+	
+	if (!n.getParam("/hexapod/parameters/hexapod_type", hexapod_type))
+	{
+		ROS_ERROR("Error reading parameter/s hexapod_type from rosparam. Check config file is loaded and type is correct\n");
+		hexapod_type = "Unknown";
 	}
 
   //Setup publish loop_rate 
