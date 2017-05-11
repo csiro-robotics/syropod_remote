@@ -14,7 +14,7 @@
 #define ROTATE_COUNTERCLOCKWISE 1.0
 
 #define NUM_SYSTEM_STATES 2
-#define NUM_ROBOT_STATES 4
+#define NUM_ROBOT_STATES 3
 #define NUM_GAIT_SELECTIONS 4
 #define NUM_POSING_MODES 4
 #define NUM_CRUISE_CONTROL_MODES 2
@@ -31,11 +31,11 @@ enum SystemState
 
 enum RobotState 
 {
-	OFF,
   PACKED,
   READY,
   RUNNING,
 	UNKNOWN = -1,
+  OFF = -2,
 };
 
 enum GaitDesignation
@@ -110,7 +110,7 @@ enum LegState
 
 //Modes/status'
 SystemState systemState = SUSPENDED;
-RobotState robotState = UNKNOWN;
+RobotState robotState = PACKED;
 GaitDesignation gaitSelection = GAIT_UNDESIGNATED;
 PosingMode posingMode = NO_POSING;
 CruiseControlMode cruiseControlMode = CRUISE_CONTROL_OFF;
