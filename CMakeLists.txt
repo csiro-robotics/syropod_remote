@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(hexapod_remote)
+project(syropod_remote)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -105,7 +105,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES hexapod_remote
+#  LIBRARIES syropod_remote
   CATKIN_DEPENDS roscpp rospy roslib std_msgs geometry_msgs message_runtime
 #  DEPENDS system_lib
 )
@@ -121,29 +121,29 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(hexapod_remote src/hexapod_remote.cpp)
-target_link_libraries(hexapod_remote ${catkin_LIBRARIES})
-add_dependencies(hexapod_remote hexapod_remote_cpp hexapod_remote_generate_messages_cpp)
+add_executable(syropod_remote src/syropod_remote.cpp)
+target_link_libraries(syropod_remote ${catkin_LIBRARIES})
+add_dependencies(syropod_remote syropod_remote_cpp syropod_remote_generate_messages_cpp)
 
 ## Declare a C++ library
-# add_library(hexapod_remote
-#   src/${PROJECT_NAME}/hexapod_remote.cpp
+# add_library(syropod_remote
+#   src/${PROJECT_NAME}/syropod_remote.cpp
 # )
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-# add_dependencies(hexapod_remote ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(syropod_remote ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
-# add_executable(hexapod_remote_node src/hexapod_remote_node.cpp)
+# add_executable(syropod_remote_node src/syropod_remote_node.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-# add_dependencies(hexapod_remote_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(syropod_remote_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(hexapod_remote_node
+# target_link_libraries(syropod_remote_node
 #   ${catkin_LIBRARIES}
 # )
 
@@ -162,7 +162,7 @@ add_dependencies(hexapod_remote hexapod_remote_cpp hexapod_remote_generate_messa
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS hexapod_remote hexapod_remote_node
+# install(TARGETS syropod_remote syropod_remote_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -187,7 +187,7 @@ add_dependencies(hexapod_remote hexapod_remote_cpp hexapod_remote_generate_messa
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_hexapod_remote.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_syropod_remote.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

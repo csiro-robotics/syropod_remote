@@ -2,7 +2,7 @@
 
 <node pkg="joy" type="joy_node" name="joystick"/>
 
-<node pkg="hexapod_remote" type="hexapod_remote" name="hexapod_remote" output="screen">
+<node pkg="syropod_remote" type="syropod_remote" name="syropod_remote" output="screen">
     <!--Joystick in X mode-->
     <param name="primary_input_axis__x" value="0"/>
     <param name="primary_input_axis__y" value="1"/>

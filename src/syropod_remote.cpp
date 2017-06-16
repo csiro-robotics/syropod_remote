@@ -4,8 +4,8 @@
 #include "geometry_msgs/Twist.h"
 #include "geometry_msgs/Point.h"
 #include "sensor_msgs/Joy.h"
-#include "hexapod_remote/androidSensor.h"
-#include "hexapod_remote/androidJoy.h"
+#include "syropod_remote/androidSensor.h"
+#include "syropod_remote/androidJoy.h"
 
 // define constant which is related to rotation. These are used only in sensor-type UI.
 #define NOT_ROTATE 0.0
@@ -122,7 +122,7 @@ LegState primaryLegState = WALKING;
 LegState secondaryLegState = WALKING;
 PoseResetMode poseResetMode = NO_RESET;
 
-std::string hexapod_type;
+std::string syropod_type;
 int num_legs = 6; //default 6
 
 bool manualPrimaryZInvert = false;
@@ -250,7 +250,7 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 		}
 		else if (konamiCode == 10)
 		{
-			std::string command_string = "play " + ros::package::getPath(hexapod_type + "_syropod") + "/.easter_egg.mp3 -q";
+			std::string command_string = "play " + ros::package::getPath(syropod_type + "_syropod") + "/.easter_egg.mp3 -q";
 			system(command_string.c_str());
 			konamiCode = 0;
 		}
@@ -633,11 +633,11 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 } 
 
 /***********************************************************************************************************************
-  * Callback for android virtual joypad control of hexapod
+  * Callback for android virtual joypad control of syropod
   * 	Note: Currently ported from control scheme designed for logitech joypad. 
   * 	Needs a redesign to make full use of a tablet based virtual controller
 ***********************************************************************************************************************/ 
-void androidJoyCallback(const hexapod_remote::androidJoy::ConstPtr& control)
+void androidJoyCallback(const syropod_remote::androidJoy::ConstPtr& control)
 {
   systemState = static_cast<SystemState>(control->systemState.data);
   gaitSelection = static_cast<GaitDesignation>(control->gaitSelection.data);
@@ -729,21 +729,21 @@ void androidJoyCallback(const hexapod_remote::androidJoy::ConstPtr& control)
 }
 
 /***********************************************************************************************************************
-  * Callback for android imu sensor control of hexapod
+  * Callback for android imu sensor control of syropod
   * 	Note: Currently ported from control scheme designed for logitech joypad. 
   * 	Needs a redesign to make full use of a tablet based virtual controller
 ***********************************************************************************************************************/ 
-void androidSensorCallback(const hexapod_remote::androidSensor::ConstPtr& control)
+void androidSensorCallback(const syropod_remote::androidSensor::ConstPtr& control)
 {
   float orientationX    = 0.0;
   float orientationY    = 0.0;
   float relativeCompass = 0.0;
   float rotate          = 0.0;
 
-  //Logic regarding deciding hexapod's start/stop 
+  //Logic regarding deciding syropod's start/stop 
   systemState = static_cast<SystemState>(control->systemState.data);
 
-  //Logic regarding deciding hexapod's moving(Walk Foward/Backward & Strafe Left/Right)
+  //Logic regarding deciding syropod's moving(Walk Foward/Backward & Strafe Left/Right)
   orientationX = 0 + round(control->orientation.x/90*imuSensitivity)/imuSensitivity;
   orientationY = 0 + round(control->orientation.y/90*imuSensitivity)/imuSensitivity;
 
@@ -757,7 +757,7 @@ void androidSensorCallback(const hexapod_remote::androidSensor::ConstPtr& contro
     orientationY = 0;
   }
 
-  //Logic regarding deciding hexapod's rotation 
+  //Logic regarding deciding syropod's rotation 
   relativeCompass = control->relativeCompass.data*(invertCompass ? -1.0:1.0);
 
   //Rotate as required
@@ -858,55 +858,55 @@ void autoNavigationCallback(const geometry_msgs::Twist &twist)
 ***********************************************************************************************************************/ 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "hexapod_remote");
+  ros::init(argc, argv, "syropod_remote");
 
   ros::NodeHandle n;
   
   parameterAdjustmentMsg.data = 0.0;
 
   //Get (or set defaults for) parameters defining joy array indices for buttons/axes
-  n.param("hexapod_remote/primary_input_axis_x", primaryInputAxisX, 0);
-  n.param("hexapod_remote/primary_input_axis_y", primaryInputAxisY, 1);
-  n.param("hexapod_remote/primary_input_axis_z", primaryInputAxisZ, 2);
-  n.param("hexapod_remote/secondary_input_axis_x", secondaryInputAxisX, 3);
-  n.param("hexapod_remote/secondary_input_axis_y", secondaryInputAxisY, 4);
-  n.param("hexapod_remote/secondary_input_axis_z", secondaryInputAxisZ, 5);
+  n.param("syropod_remote/primary_input_axis_x", primaryInputAxisX, 0);
+  n.param("syropod_remote/primary_input_axis_y", primaryInputAxisY, 1);
+  n.param("syropod_remote/primary_input_axis_z", primaryInputAxisZ, 2);
+  n.param("syropod_remote/secondary_input_axis_x", secondaryInputAxisX, 3);
+  n.param("syropod_remote/secondary_input_axis_y", secondaryInputAxisY, 4);
+  n.param("syropod_remote/secondary_input_axis_z", secondaryInputAxisZ, 5);
   
-  n.param("hexapod_remote/dpad_left_right", dPadLeftRight, 6);
-  n.param("hexapod_remote/dpad_up_down", dPadUpDown, 7);     
+  n.param("syropod_remote/dpad_left_right", dPadLeftRight, 6);
+  n.param("syropod_remote/dpad_up_down", dPadUpDown, 7);     
 
-  n.param("hexapod_remote/A_button", buttonA, 0);
-  n.param("hexapod_remote/B_button", buttonB, 1);
-  n.param("hexapod_remote/X_button", buttonX, 2);
-  n.param("hexapod_remote/Y_button", buttonY, 3);
+  n.param("syropod_remote/A_button", buttonA, 0);
+  n.param("syropod_remote/B_button", buttonB, 1);
+  n.param("syropod_remote/X_button", buttonX, 2);
+  n.param("syropod_remote/Y_button", buttonY, 3);
   
-  n.param("hexapod_remote/Left_button", bumperLeft, 4);
-  n.param("hexapod_remote/Right_button", bumperRight, 5);
+  n.param("syropod_remote/Left_button", bumperLeft, 4);
+  n.param("syropod_remote/Right_button", bumperRight, 5);
   
-  n.param("hexapod_remote/Back_button", backButton, 6);
-  n.param("hexapod_remote/Start_button", startButton, 7);
-  n.param("hexapod_remote/Logitech_button", logitechButton, 8);
+  n.param("syropod_remote/Back_button", backButton, 6);
+  n.param("syropod_remote/Start_button", startButton, 7);
+  n.param("syropod_remote/Logitech_button", logitechButton, 8);
   
-  n.param("hexapod_remote/Left_joy_button", joyButtonLeft, 9);
-  n.param("hexapod_remote/Right_joy_button", joyButtonRight, 10);    
+  n.param("syropod_remote/Left_joy_button", joyButtonLeft, 9);
+  n.param("syropod_remote/Right_joy_button", joyButtonRight, 10);    
 
   //Get (or set defaults for) parameters defining axes inversion
-  n.param("hexapod_remote/primary_input_axis_x_flip", invertPrimaryAxisX, false);
-  n.param("hexapod_remote/primary_input_axis_y_flip", invertPrimaryAxisY, false);
-  n.param("hexapod_remote/primary_input_axis_z_flip", invertPrimaryAxisZ, false);
-  n.param("hexapod_remote/secondary_input_axis_x_flip", invertSecondaryAxisX, false); 
-  n.param("hexapod_remote/secondary_input_axis_y_flip", invertSecondaryAxisY, false);
-  n.param("hexapod_remote/secondary_input_axis_z_flip", invertSecondaryAxisZ, false);
+  n.param("syropod_remote/primary_input_axis_x_flip", invertPrimaryAxisX, false);
+  n.param("syropod_remote/primary_input_axis_y_flip", invertPrimaryAxisY, false);
+  n.param("syropod_remote/primary_input_axis_z_flip", invertPrimaryAxisZ, false);
+  n.param("syropod_remote/secondary_input_axis_x_flip", invertSecondaryAxisX, false); 
+  n.param("syropod_remote/secondary_input_axis_y_flip", invertSecondaryAxisY, false);
+  n.param("syropod_remote/secondary_input_axis_z_flip", invertSecondaryAxisZ, false);
   
   //Get (or set defaults for) parameters for other operating variables
-  n.param("hexapod_remote/sensitivity", imuSensitivity, 10);
-  n.param("hexapod_remote/pub_rate",publishRate, 50);
-  n.param("hexapod_remote/compass_flip",invertCompass, true);
-  n.param("hexapod_remote/imu_flip", invertImu, true);
-  n.param("hexapod_remote/param_adjust_sensitivity", parameterAdjustmentSensitivity, 10);
+  n.param("syropod_remote/sensitivity", imuSensitivity, 10);
+  n.param("syropod_remote/pub_rate",publishRate, 50);
+  n.param("syropod_remote/compass_flip",invertCompass, true);
+  n.param("syropod_remote/imu_flip", invertImu, true);
+  n.param("syropod_remote/param_adjust_sensitivity", parameterAdjustmentSensitivity, 10);
 	
 	std::vector<std::string> leg_id_array;
-	if (!n.getParam("/hexapod/parameters/leg_id", leg_id_array))
+	if (!n.getParam("/syropod/parameters/leg_id", leg_id_array))
 	{
 		ROS_ERROR("Error reading parameter/s leg_id from rosparam. Check config file is loaded and type is correct\n");
 	}
@@ -915,10 +915,10 @@ int main(int argc, char **argv)
 		num_legs = leg_id_array.size();
 	}	
 	
-	if (!n.getParam("/hexapod/parameters/hexapod_type", hexapod_type))
+	if (!n.getParam("/syropod/parameters/syropod_type", syropod_type))
 	{
-		ROS_ERROR("Error reading parameter/s hexapod_type from rosparam. Check config file is loaded and type is correct\n");
-		hexapod_type = "Unknown";
+		ROS_ERROR("Error reading parameter/s syropod_type from rosparam. Check config file is loaded and type is correct\n");
+		syropod_type = "Unknown";
 	}
 
   //Setup publish loop_rate 
@@ -928,28 +928,28 @@ int main(int argc, char **argv)
   ros::Subscriber androidSensorSub = n.subscribe("android/sensor", 1, androidSensorCallback);
   ros::Subscriber androidJoySub = n.subscribe("android/joy", 1, androidJoyCallback);
   ros::Subscriber joypadSub = n.subscribe("joy", 1, joyCallback);
-  ros::Subscriber autoNavigationSub = n.subscribe("hexapod_auto_navigation/desired_velocity", 1, autoNavigationCallback);
+  ros::Subscriber autoNavigationSub = n.subscribe("syropod_auto_navigation/desired_velocity", 1, autoNavigationCallback);
   
   //Setup publishers 
-  ros::Publisher bodyVelocityPublisher = n.advertise<geometry_msgs::Twist>("hexapod_remote/desired_velocity",1);
-  ros::Publisher posePublisher = n.advertise<geometry_msgs::Twist>("hexapod_remote/desired_pose",1);
-  ros::Publisher primaryTipVelocityPublisher = n.advertise<geometry_msgs::Point>("hexapod_remote/primary_tip_velocity",1);
-  ros::Publisher secondaryTipVelocityPublisher = n.advertise<geometry_msgs::Point>("hexapod_remote/secondary_tip_velocity",1);
+  ros::Publisher bodyVelocityPublisher = n.advertise<geometry_msgs::Twist>("syropod_remote/desired_velocity",1);
+  ros::Publisher posePublisher = n.advertise<geometry_msgs::Twist>("syropod_remote/desired_pose",1);
+  ros::Publisher primaryTipVelocityPublisher = n.advertise<geometry_msgs::Point>("syropod_remote/primary_tip_velocity",1);
+  ros::Publisher secondaryTipVelocityPublisher = n.advertise<geometry_msgs::Point>("syropod_remote/secondary_tip_velocity",1);
   
   //Status publishers
-  ros::Publisher systemStatePublisher = n.advertise<std_msgs::Int8>("hexapod_remote/system_state", 1);
-	ros::Publisher robotStatePublisher = n.advertise<std_msgs::Int8>("hexapod_remote/robot_state", 1);
-  ros::Publisher gaitSelectionPublisher = n.advertise<std_msgs::Int8>("hexapod_remote/gait_selection", 1);
-  ros::Publisher posingModePublisher = n.advertise<std_msgs::Int8>("hexapod_remote/posing_mode", 1);
-  ros::Publisher cruiseControlPublisher = n.advertise<std_msgs::Int8>("hexapod_remote/cruise_control_mode", 1);
-  ros::Publisher autoNavigationPublisher = n.advertise<std_msgs::Int8>("hexapod_remote/auto_navigation_mode",1);  
-  ros::Publisher primaryLegSelectionPublisher = n.advertise<std_msgs::Int8>("hexapod_remote/primary_leg_selection", 1);
-  ros::Publisher secondaryLegSelectionPublisher = n.advertise<std_msgs::Int8>("hexapod_remote/secondary_leg_selection", 1);
-  ros::Publisher primaryLegStatePublisher = n.advertise<std_msgs::Int8>("hexapod_remote/primary_leg_state", 1);
-  ros::Publisher secondaryLegStatePublisher = n.advertise<std_msgs::Int8>("hexapod_remote/secondary_leg_state", 1);  
-  ros::Publisher parameterSelectionPublisher = n.advertise<std_msgs::Int8>("hexapod_remote/parameter_selection", 1);
-  ros::Publisher parameterAdjustmentPublisher = n.advertise<std_msgs::Int8>("hexapod_remote/parameter_adjustment", 1);  
-  ros::Publisher poseResetPublisher = n.advertise<std_msgs::Int8>("hexapod_remote/pose_reset_mode", 1);
+  ros::Publisher systemStatePublisher = n.advertise<std_msgs::Int8>("syropod_remote/system_state", 1);
+	ros::Publisher robotStatePublisher = n.advertise<std_msgs::Int8>("syropod_remote/robot_state", 1);
+  ros::Publisher gaitSelectionPublisher = n.advertise<std_msgs::Int8>("syropod_remote/gait_selection", 1);
+  ros::Publisher posingModePublisher = n.advertise<std_msgs::Int8>("syropod_remote/posing_mode", 1);
+  ros::Publisher cruiseControlPublisher = n.advertise<std_msgs::Int8>("syropod_remote/cruise_control_mode", 1);
+  ros::Publisher autoNavigationPublisher = n.advertise<std_msgs::Int8>("syropod_remote/auto_navigation_mode",1);  
+  ros::Publisher primaryLegSelectionPublisher = n.advertise<std_msgs::Int8>("syropod_remote/primary_leg_selection", 1);
+  ros::Publisher secondaryLegSelectionPublisher = n.advertise<std_msgs::Int8>("syropod_remote/secondary_leg_selection", 1);
+  ros::Publisher primaryLegStatePublisher = n.advertise<std_msgs::Int8>("syropod_remote/primary_leg_state", 1);
+  ros::Publisher secondaryLegStatePublisher = n.advertise<std_msgs::Int8>("syropod_remote/secondary_leg_state", 1);  
+  ros::Publisher parameterSelectionPublisher = n.advertise<std_msgs::Int8>("syropod_remote/parameter_selection", 1);
+  ros::Publisher parameterAdjustmentPublisher = n.advertise<std_msgs::Int8>("syropod_remote/parameter_adjustment", 1);  
+  ros::Publisher poseResetPublisher = n.advertise<std_msgs::Int8>("syropod_remote/pose_reset_mode", 1);
 	
 	//Init message values
 	bodyVelocityMsg.linear.x = 0.0;
