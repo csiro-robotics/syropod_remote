@@ -86,89 +86,89 @@ Control scheme for Logitech F710 wireless gamepad:
 ## Inputs:
 * Joypad Input:
     * Description: Input message from joypad.
-    * Topic: "*/joy*"
+    * Topic: */joy*
     * Type: sensor_msgs::Joy::ConstPtr
 * Android Tablet Joypad Input
     * Description: See tablet_control package.
-    * Topic: "*/android/joy*"
+    * Topic: */android/joy*
     * Type: syropod_remote::androidJoy::ConstPtr (custom message)
 * Android Tablet Accelerometer Input
     * Description: See tablet_control package.
-    * Topic: "*/android/sensor*"
+    * Topic: */android/sensor*
     * Type: syropod_remote::androidSensor::ConstPtr (custom message)
 * Syropod Auto-Navigation Input
     * Description: The input desired body velocity from syropod_auto_navigation node. 
-    * Topic: "*/syropod\_auto\_navigation/desired\_velocity*"
+    * Topic: */syropod\_auto\_navigation/desired\_velocity*
     * Type: geometry_msgs::Twist
 
 ## Outputs:
 * System State:
     * Description: The desired state of the entire Syropod High-level Controller system.
-    * Topic: "*/syropod\_remote/system\_state*"
+    * Topic: */syropod\_remote/system\_state*
     * Type: std_msgs::Int8
 * Robot State:
     * Description: The desired state of the robot.
-    * Topic: "*/syropod\_remote/robot_state*"
+    * Topic: */syropod\_remote/robot_state*
     * Type: std_msgs::Int8
 * Desired Velocity:
     * Description: The desired body velocity of the robot.
-    * Topic: "*/syropod\_remote/desired\_velocity*"
+    * Topic: */syropod\_remote/desired\_velocity*
     * Type: geometry_msgs::Twist
 * Desired Pose:
     * Description: The desired body pose of the robot.
-    * Topic: "*/syropod\_remote/desired\_pose*"
+    * Topic: */syropod\_remote/desired\_pose*
     * Type: geometry_msgs::Twist
 * Posing Mode:
     * Description: The desired manual body posing input mode.
-    * Topic: "*/syropod\_remote/posing\_mode*"
+    * Topic: */syropod\_remote/posing\_mode*
     * Type: std_msgs::Int8
 * Pose Reset Mode:
     * Description: The desired manual body pose reset mode.
-    * Topic: "*/syropod\_remote/pose\_reset\_mode*"
+    * Topic: */syropod\_remote/pose\_reset\_mode*
     * Type: std_msgs::Int8
-Gait Selection:
+* Gait Selection:
     * Description: The desired gait selection for the walk controller of the robot.
-    * Topic: "*/syropod\_remote/gait\_selection*"
+    * Topic: */syropod\_remote/gait\_selection*
     * Type: std_msgs::Int8
-Cruise Control Mode:
+* Cruise Control Mode:
     * Description: The desired cruise control mode.
-    * Topic: "*/syropod\_remote/cruise\_control\_mode*"
+    * Topic: */syropod\_remote/cruise\_control\_mode*
     * Type: std_msgs::Int8
-Auto-Nagivation Mode:
+* Auto-Nagivation Mode:
     * Description: The desired auto-navigation mode.
-    * Topic: "*/syropod\_remote/auto\_navigation\_mode*"
+    * Topic: */syropod\_remote/auto\_navigation\_mode*
     * Type: std_msgs::Int8
-Primary Leg Selection:
+* Primary Leg Selection:
     * Description: The desired leg selected for primary manipulation.
-    * Topic: "*/syropod\_remote/primary\_leg\_selection*"
+    * Topic: */syropod\_remote/primary\_leg\_selection*
     * Type: std_msgs::Int8
-Primary Leg State:
+* Primary Leg State:
     * Description: The desired state of the leg selected for primary manipulation.
-    * Topic: "*/syropod\_remote/primary\_leg\_state*"
+    * Topic: */syropod\_remote/primary\_leg\_state*
     * Type: std_msgs::Int8
-Primary Tip Velocity:
+* Primary Tip Velocity:
     * Description: The desired tip velocity for the leg selected for primary manipulation.
-    * Topic: "*/syropod\_remote/primary\_tip\_velocity*"
+    * Topic: */syropod\_remote/primary\_tip\_velocity*
     * Type: geometry_msgs::Point
-Secondary Leg Selection:
+* Secondary Leg Selection:
     * Description: The desired leg selected for secondary manipulation.
-    * Topic: "*/syropod\_remote/secondary\_leg\_selection*"
+    * Topic: */syropod\_remote/secondary\_leg\_selection*
     * Type: std_msgs::Int8
-Secondary Leg State:
+* Secondary Leg State:
     * Description: The desired state of the leg selected for secondary manipulation.
-    * Topic: "*/syropod\_remote/secondary\_leg\_state*"
+    * Topic: */syropod\_remote/secondary\_leg\_state*
     * Type: std_msgs::Int8
-Secondary Tip Velocity:
+* Secondary Tip Velocity:
     * Description: The desired tip velocity for the leg selected for secondary manipulation.
-    * Topic: "*/syropod\_remote/secondary\_tip\_velocity*"
+    * Topic: */syropod\_remote/secondary\_tip\_velocity*
     * Type: geometry_msgs::Point
-Parameter Selection:
+* Parameter Selection:
     * Description: The desired parameter selection for possible adjustment.
-    * Topic: "*/syropod\_remote/parameter\_selection*"
+    * Topic: */syropod\_remote/parameter\_selection*
     * Type: std_msgs::Int8
-Parameter Adjustment:
+* Parameter Adjustment:
     * Description: The desired adjustment of the selected parameter (increment/decrement).
-    * Topic: "*/syropod\_remote/parameter\_adjustment*"
+    * Topic: */syropod\_remote/parameter\_adjustment*
     * Type: std_msgs::Int8
 
 ## Changelog:
