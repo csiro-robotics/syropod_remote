@@ -3,79 +3,13 @@
 <node pkg="joy" type="joy_node" name="joystick"/>
 
 <node pkg="syropod_remote" type="syropod_remote" name="syropod_remote" output="screen">
-    <!--Joystick in X mode-->
-    <param name="primary_input_axis__x" value="0"/>
-    <param name="primary_input_axis__y" value="1"/>
-    <param name="primary_input_axis__z" value="2"/>
-    <param name="secondary_input_axis__x" value="3"/>
-    <param name="secondary_input_axis__y" value="4"/>
-    <param name="secondary_input_axis__z" value="5"/>
-    
-    <param name="dpad_left_right" value="6"/>
-    <param name="dpad_up_down" value="7"/>    
-
-    <param name="A_button" value="0"/>
-    <param name="B_button" value="1"/>
-    <param name="X_button" value="2"/>
-    <param name="Y_button" value="3"/>
-    <param name="Left_button" value="4"/>
-    <param name="Right_button" value="5"/>
-    <param name="Back_button" value="6"/>
-    <param name="Start_button" value="7"/>
-    <param name="Logitech_button" value="8"/>
-    <param name="Left_joy_button" value="9"/>
-    <param name="Right_joy_button" value="10"/>
-    <!-- End X mode -->
-
-    <!--Joystick in D mode-->
-    <!--
-    <param name="primary_input_axis__x" value="0"/>
-    <param name="primary_input_axis__y" value="1"/>
-    <param name="primary_input_axis__z" value="4"/>
-    <param name="secondary_input_axis__x" value="2"/>
-    <param name="secondary_input_axis__y" value="3"/>
-    <param name="secondary_input_axis__z" value="5"/>
-
-    <param name="A_button" value="1"/>
-    <param name="B_button" value="2"/>
-    <param name="X_button" value="0"/>
-    <param name="Y_button" value="3"/>
-    <param name="Left_button" value="4"/>
-    <param name="Right_button" value="5"/>
-    <param name="Back_button" value="8"/>
-    <param name="Start_button" value="9"/>
-    <param name="Logitech_button" value="9"/>
-    <param name="Left_joy_button" value="10"/>
-    <param name="Right_joy_button" value="11"/>
-    -->
-    <!-- End D mode -->
-
-    
-    <param name="primary_input_axis__x_flip" value="false"/>
-    <param name="primary_input_axis__y_flip" value="false"/>   
-    <param name="primary_input_axis__z_flip" value="false"/>
-    <param name="secondary_input_axis__x_flip" value="false"/>
-    <param name="secondary_input_axis__y_flip" value="false"/>
-    <param name="secondary_input_axis__z_flip" value="false"/>
-    
-    <param name="pub_rate" value="10"/>
-
-    <!-- bigger is more sensitive to value of orientation sensor -->
-    <param name="sensitivity" value="3"/>
-
-    <!-- compass direction -->
-    <param name="compass_flip" value="true"/>
-    
-    <!-- imu direction -->
-    <param name="imu_flip" value="true"/>
-    
-    <!-- parameter adjustment sensitivity -->
-    <param name="param_adjust_sensitivity" value="10"/>
-
+    <param name="publish_rate" value="10"/>
+    <param name="imu_sensitivity" value="3"/>
+    <param name="invert_compass" value="true"/>
+    <param name="invert_imu" value="true"/>
 </node>
 
 <!-- Rosbridge server --> 
-
 <!--include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" /-->
 
 </launch>

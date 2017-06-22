@@ -1,855 +1,1095 @@
-#include "ros/ros.h"
-#include "ros/package.h"
-#include "std_msgs/Bool.h"
-#include "geometry_msgs/Twist.h"
-#include "geometry_msgs/Point.h"
-#include "sensor_msgs/Joy.h"
-#include "syropod_remote/androidSensor.h"
-#include "syropod_remote/androidJoy.h"
+/*******************************************************************************************************************//**
+ *  @file    syropod_remote.cpp
+ *  @brief   Source file for Syropod Remote node.
+ *
+ *  @author  Fletcher Talbot (fletcher.talbot@csiro.au)
+ *  @date    June 2017
+ *  @version 0.5.0
+ *
+ *  CSIRO Autonomous Systems Laboratory
+ *  Queensland Centre for Advanced Technologies
+ *  PO Box 883, Kenmore, QLD 4069, Australia
+ *
+ *  (c) Copyright CSIRO 2017
+ *
+ *  All rights reserved, no part of this program may be used
+ *  without explicit permission of CSIRO
+ *
+***********************************************************************************************************************/
 
-// define constant which is related to rotation. These are used only in sensor-type UI.
-#define NOT_ROTATE 0.0
-#define ENABLE_ROTATION 1.0
-#define ROTATE_CLOCKWISE -1.0
-#define ROTATE_COUNTERCLOCKWISE 1.0
+#include "syropod_remote/syropod_remote.h"
 
-#define NUM_SYSTEM_STATES 2
-#define NUM_ROBOT_STATES 3
-#define NUM_GAIT_SELECTIONS 4
-#define NUM_POSING_MODES 4
-#define NUM_CRUISE_CONTROL_MODES 2
-#define NUM_AUTO_NAVIGATION_MODES 2
-#define NUM_PARAMETER_SELECTIONS 9
-#define NUM_LEG_STATES 2
-
-
-enum SystemState
+Remote::Remote(ros::NodeHandle n, Parameters* params)
+  : n_(n)
+  , params_(params)
 {
-	SUSPENDED,
-	OPERATIONAL,
-};
+  //Subscribe to control topic/s
+  android_sensor_sub_ = n_.subscribe("android/sensor", 1, &Remote::androidSensorCallback, this);
+  //android_joy_sub_ = n_.subscribe("android/joy", 1, &Remote::androidJoyCallback, this);
+  joypad_sub_ = n_.subscribe("joy", 1, &Remote::joyCallback, this);
+  auto_navigation_sub_ = n_.subscribe("syropod_auto_navigation/desired_velocity", 1,
+                                            &Remote::autoNavigationCallback, this);
 
-enum RobotState 
+  //Setup publishers 
+  desired_velocity_pub_ = n_.advertise<geometry_msgs::Twist>("syropod_remote/desired_velocity",1);
+  desired_pose_pub_ = n_.advertise<geometry_msgs::Twist>("syropod_remote/desired_pose",1);
+  primary_tip_velocity_pub_ = n_.advertise<geometry_msgs::Point>("syropod_remote/primary_tip_velocity",1);
+  secondary_tip_velocity_pub_ = n_.advertise<geometry_msgs::Point>("syropod_remote/secondary_tip_velocity",1);
+  
+  //Status publishers
+  system_state_pub_ = n_.advertise<std_msgs::Int8>("syropod_remote/system_state", 1);
+	robot_state_pub_ = n_.advertise<std_msgs::Int8>("syropod_remote/robot_state", 1);
+  gait_selection_pub_ = n_.advertise<std_msgs::Int8>("syropod_remote/gait_selection", 1);
+  posing_mode_pub_ = n_.advertise<std_msgs::Int8>("syropod_remote/posing_mode", 1);
+  cruise_control_pub_ = n_.advertise<std_msgs::Int8>("syropod_remote/cruise_control_mode", 1);
+  auto_navigation_pub_ = n_.advertise<std_msgs::Int8>("syropod_remote/auto_navigation_mode",1);
+  primary_leg_selection_pub_ = n_.advertise<std_msgs::Int8>("syropod_remote/primary_leg_selection", 1);
+  secondary_leg_selection_pub_ = n_.advertise<std_msgs::Int8>("syropod_remote/secondary_leg_selection", 1);
+  primary_leg_state_pub_ = n_.advertise<std_msgs::Int8>("syropod_remote/primary_leg_state", 1);
+  secondary_leg_state_pub_ = n_.advertise<std_msgs::Int8>("syropod_remote/secondary_leg_state", 1);
+  parameter_selection_pub_ = n_.advertise<std_msgs::Int8>("syropod_remote/parameter_selection", 1);
+  parameter_adjustment_pub_ = n_.advertise<std_msgs::Int8>("syropod_remote/parameter_adjustment", 1);
+  pose_reset_pub_ = n_.advertise<std_msgs::Int8>("syropod_remote/pose_reset_mode", 1);
+}
+
+/***********************************************************************************************************************
+  * Logitech button
+***********************************************************************************************************************/
+void Remote::updateSystemState(void)
 {
-  PACKED,
-  READY,
-  RUNNING,
-	UNKNOWN = -1,
-  OFF = -2,
-};
+  switch (current_interface_type_)
+  {
+    case (JOYPAD):
+    {
+      bool logitech_pressed = joypad_control_.buttons[JoypadButtonIndex::LOGITECH];
+      if (logitech_pressed && debounce_logitech_)
+      {
+        int nextSystemState = (static_cast<int>(system_state_)+1)%NUM_SYSTEM_STATES;
+        system_state_ = static_cast<SystemState>(nextSystemState);
+        debounce_logitech_ = false;
+      }
+      else if (!logitech_pressed)
+      {
+        debounce_logitech_ = true;
+      }
+      break;
+    }
+    case (TABLET_JOY):
+      system_state_ = static_cast<SystemState>(android_joy_control_.system_state.data);
+      break;
+    case (TABLET_SENSOR):
+      //TODO
+      break;
+    case (KEYBOARD):
+      //TODO
+      break;
+    default:
+      break;
+  }
+}
 
-enum GaitDesignation
+/***********************************************************************************************************************
+  * Konami Code (Up, Up, Down, Down, Left, Right, Left, Right, B, A)
+***********************************************************************************************************************/
+void Remote::checkKonamiCode(void)
 {
-  WAVE_GAIT,
-  AMBLE_GAIT,
-  RIPPLE_GAIT,
-  TRIPOD_GAIT,
-  GAIT_UNDESIGNATED = -1,
-};
+  switch (current_interface_type_)
+  {
+    case (JOYPAD):
+    {
+      bool dPad_up_pressed = (joypad_control_.axes[JoypadAxisIndex::DPAD_UP_DOWN] == 1);
+      bool dPad_down_pressed = (joypad_control_.axes[JoypadAxisIndex::DPAD_UP_DOWN] == -1);
+      bool dPad_left_pressed = (joypad_control_.axes[JoypadAxisIndex::DPAD_LEFT_RIGHT] == 1);
+      bool dPad_right_pressed = (joypad_control_.axes[JoypadAxisIndex::DPAD_LEFT_RIGHT] == -1);
+      bool b_pressed = joypad_control_.buttons[JoypadButtonIndex::B_BUTTON];
+      bool a_pressed = joypad_control_.buttons[JoypadButtonIndex::A_BUTTON];
+      
+      if ((konami_code_ == 0 && dPad_up_pressed) ||
+          (konami_code_ == 1 && dPad_up_pressed) ||
+          (konami_code_ == 2 && dPad_down_pressed) ||
+          (konami_code_ == 3 && dPad_down_pressed) ||
+          (konami_code_ == 4 && dPad_left_pressed) ||
+          (konami_code_ == 5 && dPad_right_pressed) ||
+          (konami_code_ == 6 && dPad_left_pressed) ||
+          (konami_code_ == 7 && dPad_right_pressed) ||
+          (konami_code_ == 8 && b_pressed) ||
+          (konami_code_ == 9 && a_pressed))
+      {
+        konami_code_++;
+      }
+      else if (konami_code_ == 10)
+      {
+        Parameter<string> syropod_type;
+        syropod_type.init(n_, "syropod_type", "/syropod/parameters/");
+        string syropod_package_name = syropod_type.data + "_syropod";
+        string command_string = "play " + ros::package::getPath(syropod_package_name) + "/.easter_egg.mp3 -q";
+        system(command_string.c_str());
+        konami_code_ = 0;
+      }
+      break;
+    }
+    case (TABLET_JOY):
+      //TODO
+      break;
+    case (TABLET_SENSOR):
+      //TODO
+      break;
+    case (KEYBOARD):
+      //TODO
+      break;
+    default:
+      break;
+  }
+}
 
-enum PosingMode
+/***********************************************************************************************************************
+  * Start button
+***********************************************************************************************************************/
+void Remote::updateRobotState(void)
 {
-  NO_POSING,
-  X_Y_POSING,
-  PITCH_ROLL_POSING,
-  Z_YAW_POSING,
-};
+  switch (current_interface_type_)
+  {
+    case (JOYPAD):
+    {
+      //On Start button press, iterate system state forward
+      bool start_pressed = joypad_control_.buttons[START];
+      if (start_pressed && debounce_start_) //Start button
+      {
+        int nextRobotState = std::min((static_cast<int>(robot_state_)+1), NUM_ROBOT_STATES-1);
+        robot_state_ = static_cast<RobotState>(nextRobotState);
+        debounce_start_ = false;
+      }
+      else if (!start_pressed)
+      {
+        debounce_start_ = true;
+      }
+      
+      //On Back button press, iterate system state backward
+      bool back_pressed = joypad_control_.buttons[BACK];
+      if (back_pressed && debounce_back_) //Back button
+      {
+        int nextRobotState = std::max((static_cast<int>(robot_state_)-1), 0);
+        robot_state_ = static_cast<RobotState>(nextRobotState);
+        debounce_back_ = false;
+      }	
+      else if (!back_pressed)
+      {
+        debounce_back_ = true;
+      }
+      break;
+    }
+    case (TABLET_JOY):
+      robot_state_ = static_cast<RobotState>(android_joy_control_.robot_state.data);
+      break;
+    case (TABLET_SENSOR):
+      robot_state_ = static_cast<RobotState>(android_sensor_control_.robot_state.data);
+      break;
+    case (KEYBOARD):
+      //TODO
+      break;
+    default:
+      break;
+  }
+}
 
-enum CruiseControlMode
+/***********************************************************************************************************************
+  * A Button
+***********************************************************************************************************************/
+void Remote::updateGaitSelection(void)
 {
-  CRUISE_CONTROL_OFF,
-  CRUISE_CONTROL_ON,  
-};
+  switch (current_interface_type_)
+  {
+    case (JOYPAD):
+    {
+      //Cycle gaits on A button press
+      bool a_pressed = joypad_control_.buttons[A_BUTTON];
+      if (a_pressed && debounce_a_)
+      {    
+        int nextGaitSelection = (static_cast<int>(gait_selection_)+1)%NUM_GAIT_SELECTIONS;
+        gait_selection_ = static_cast<GaitDesignation>(nextGaitSelection);
+        debounce_a_ = false;
+      }
+      else if (!a_pressed)
+      {
+        debounce_a_ = true;
+      }
+      break;
+    }
+    case (TABLET_JOY):
+      gait_selection_ = static_cast<GaitDesignation>(android_joy_control_.gait_selection.data);
+      break;
+    case (TABLET_SENSOR):
+      //TODO
+      break;
+    case (KEYBOARD):
+      //TODO
+      break;
+    default:
+      break;
+  }
+}
 
-enum AutoNavigationMode
+/***********************************************************************************************************************
+  * X Button
+***********************************************************************************************************************/
+void Remote::updateCruiseControlMode(void)
 {
-  AUTO_NAVIGATION_OFF,
-  AUTO_NAVIGATION_ON,  
-};
+  switch (current_interface_type_)
+  {
+    case (JOYPAD):
+    {
+      //Cycle cruise control mode on X button press
+      bool x_pressed = joypad_control_.buttons[JoypadButtonIndex::X_BUTTON];
+      if (x_pressed && debounce_x_)
+      {
+        int nextCruiseControlMode = (static_cast<int>(cruise_control_mode_)+1)%NUM_CRUISE_CONTROL_MODES;
+        cruise_control_mode_ = static_cast<CruiseControlMode>(nextCruiseControlMode);
+        debounce_x_ = false;
+      }
+      else if (!x_pressed)
+      {
+        debounce_x_ = true;
+      }
+      break;
+    }
+    case (TABLET_JOY):
+      cruise_control_mode_ = static_cast<CruiseControlMode>(android_joy_control_.cruise_control_mode.data);
+      break;
+    case (TABLET_SENSOR):
+      //TODO
+      break;
+    case (KEYBOARD):
+      //TODO
+      break;
+    default:
+      break;
+  }
+}
 
-enum PoseResetMode
+/***********************************************************************************************************************
+  * Y Button
+***********************************************************************************************************************/
+void Remote::updateAutoNavigationMode(void)
 {
-  NO_RESET,
-  Z_YAW_RESET,
-  X_Y_RESET,
-  PITCH_ROLL_RESET,
-  ALL_RESET,
-};
+  switch (current_interface_type_)
+  {
+    case (JOYPAD):
+    {
+      //Cycle auto navigation mode on Y button press
+      bool y_pressed = joypad_control_.buttons[JoypadButtonIndex::Y_BUTTON];
+      if (y_pressed && debounce_y_)
+      {    
+        int nextAutoNavigationMode = (static_cast<int>(auto_navigation_mode_)+1)%NUM_AUTO_NAVIGATION_MODES;
+        auto_navigation_mode_ = static_cast<AutoNavigationMode>(nextAutoNavigationMode);
+        debounce_y_ = false;
+        desired_velocity_msg_.linear.x = 0.0;
+        desired_velocity_msg_.linear.y = 0.0;
+        desired_velocity_msg_.angular.z = 0.0;
+      }  
+      else if (!y_pressed)
+      {
+        debounce_y_ = true;
+      }
+      break;
+    }
+    case (TABLET_JOY):
+      auto_navigation_mode_ = static_cast<AutoNavigationMode>(android_joy_control_.auto_navigation_mode.data);
+      break;
+    case (TABLET_SENSOR):
+      //TODO
+      break;
+    case (KEYBOARD):
+      //TODO
+      break;
+    default:
+      break;
+  }
+}
 
-enum ParameterSelection
+/***********************************************************************************************************************
+  * B Button
+***********************************************************************************************************************/
+void Remote::updatePosingMode(void)
 {
-  NO_PARAMETER_SELECTION,
-  STEP_FREQUENCY,
-  STEP_CLEARANCE,
-  BODY_CLEARANCE,
-  LEG_SPAN_SCALE,
-  VIRTUAL_MASS,
-  VIRTUAL_STIFFNESS,
-  VIRTUAL_DAMPING,
-  FORCE_GAIN,
-};
+  switch (current_interface_type_)
+  {
+    case (JOYPAD):
+    {
+      //Cycle posing mode on B button press
+      bool b_pressed = joypad_control_.buttons[B_BUTTON];
+      if (b_pressed && debounce_b_)
+      {
+        int nextPosingMode = (static_cast<int>(posing_mode_)+1)%NUM_POSING_MODES;
+        posing_mode_ = static_cast<PosingMode>(nextPosingMode);
+        if (secondary_leg_state_ != MANUAL)
+        {
+          secondary_leg_selection_ = LEG_UNDESIGNATED;
+        }
+        debounce_b_ = false;
+      }
+      else if (!b_pressed)
+      {
+        debounce_b_ = true;
+      }
+      break;
+    }
+    case (TABLET_JOY):
+      posing_mode_ = static_cast<PosingMode>(android_joy_control_.posing_mode.data);
+      break;
+    case (TABLET_SENSOR):
+      posing_mode_ = static_cast<PosingMode>(android_sensor_control_.posing_mode.data);
+      break;
+    case (KEYBOARD):
+      //TODO
+      break;
+    default:
+      break;
+  }
+}
 
-enum LegSelection
+/***********************************************************************************************************************
+  * Pose Reset
+***********************************************************************************************************************/
+void Remote::updatePoseResetMode(void)
 {
-  LEG_0,
-  LEG_1,
-  LEG_2,
-  LEG_3,
-  LEG_4,
-  LEG_5,
-  LEG_6,
-  LEG_7,
-  LEG_UNDESIGNATED = -1,
-};
+  switch (current_interface_type_)
+  {
+    case (JOYPAD):
+    {
+      //On R3 button press, if no leg is currently selected, set pose reset mode depending on current posing mode instead
+      bool right_joystick_pressed = joypad_control_.buttons[RIGHT_JOYSTICK];
+      if (secondary_leg_selection_ == LEG_UNDESIGNATED)
+      {
+        if (right_joystick_pressed)
+        {
+          switch(posing_mode_)
+          {
+            case(NO_POSING):
+              pose_reset_mode_ = ALL_RESET;
+              break;
+            case(X_Y_POSING):
+              pose_reset_mode_ = X_Y_RESET;
+              break;
+            case(PITCH_ROLL_POSING):
+              pose_reset_mode_ = PITCH_ROLL_RESET;
+              break;
+            case(Z_YAW_POSING):
+              pose_reset_mode_ = Z_YAW_RESET;
+              break;
+          }
+        }
+        else
+        {
+          pose_reset_mode_ = NO_RESET;
+        }
+      }
+      break;
+    }
+    case (TABLET_JOY):
+      pose_reset_mode_ = static_cast<PoseResetMode>(android_joy_control_.pose_reset_mode.data);
+      break;
+    case (TABLET_SENSOR):
+      //TODO
+      break;
+    case (KEYBOARD):
+      //TODO
+      break;
+    default:
+      break;
+  }
+}
 
-enum LegState
+/***********************************************************************************************************************
+  * D-Pad Buttons
+***********************************************************************************************************************/
+void Remote::updateParameterAdjustment(void)
 {
-  WALKING,
-  MANUAL,
-};
+  switch (current_interface_type_)
+  {
+    case (JOYPAD):
+    {
+      //Message with 1.0 or -1.0 to increment/decrement parameter
+      parameter_adjustment_msg_.data = joypad_control_.axes[JoypadAxisIndex::DPAD_UP_DOWN]; 
+      
+      //Cycle parameter selction on left/right dpad press
+      int dpad_left_right = joypad_control_.axes[JoypadAxisIndex::DPAD_LEFT_RIGHT];
+      if (dpad_left_right && debounce_dpad_)
+      {
+        int nextParameterSelection = (static_cast<int>(parameter_selection_)-dpad_left_right)%NUM_PARAMETER_SELECTIONS;
+        if (nextParameterSelection < 0)
+        {
+          nextParameterSelection += NUM_PARAMETER_SELECTIONS;
+        }
+        parameter_selection_ = static_cast<ParameterSelection>(nextParameterSelection);
+        debounce_dpad_ = false;
+      }
+      else if (!dpad_left_right)
+      {
+        debounce_dpad_ = true;
+      }
+      break;
+    }
+    case (TABLET_JOY):
+      parameter_selection_ = static_cast<ParameterSelection>(android_joy_control_.parameter_selection.data);
+      parameter_adjustment_msg_.data = android_joy_control_.parameter_adjustment.data; //Should be 0.0, 1.0 or -1.0
+      break;
+    case (TABLET_SENSOR):
+      //TODO
+      break;
+    case (KEYBOARD):
+      //TODO
+      break;
+    default:
+      break;
+  }
+}
 
-//Modes/status'
-SystemState systemState = SUSPENDED;
-RobotState robotState = PACKED;
-GaitDesignation gaitSelection = GAIT_UNDESIGNATED;
-PosingMode posingMode = NO_POSING;
-CruiseControlMode cruiseControlMode = CRUISE_CONTROL_OFF;
-AutoNavigationMode autoNavigationMode = AUTO_NAVIGATION_OFF;
-ParameterSelection parameterSelection = NO_PARAMETER_SELECTION;
-LegSelection primaryLegSelection = LEG_UNDESIGNATED;
-LegSelection secondaryLegSelection = LEG_UNDESIGNATED;
-LegState primaryLegState = WALKING;
-LegState secondaryLegState = WALKING;
-PoseResetMode poseResetMode = NO_RESET;
 
-std::string syropod_type;
-int num_legs = 6; //default 6
 
-bool manualPrimaryZInvert = false;
-bool manualSecondaryZInvert = false;
+/***********************************************************************************************************************
+  * Left Bumper (L1) Button
+***********************************************************************************************************************/
+void Remote::updatePrimaryLegSelection(void)
+{
+  switch (current_interface_type_)
+  {
+    case (JOYPAD):
+    {
+      //Cycle primary leg selection on R1 button press (skip slection if already allocated to secondary)
+      bool left_bumped_pressed = joypad_control_.buttons[JoypadButtonIndex::LEFT_BUMPER];
+      if (primary_leg_state_ == WALKING)
+      {
+        if (left_bumped_pressed && debounce_left_bumper_)
+        {
+          int nextPrimaryLegSelection = (static_cast<int>(primary_leg_selection_)+1)%(leg_count_ +1);
+          if (nextPrimaryLegSelection == static_cast<int>(secondary_leg_selection_) && secondary_leg_state_ == MANUAL)
+          {
+            nextPrimaryLegSelection = (static_cast<int>(secondary_leg_selection_)+1)%(leg_count_ +1);
+          }
+          if (nextPrimaryLegSelection < leg_count_)
+          {
+            primary_leg_selection_ = static_cast<LegSelection>(nextPrimaryLegSelection);
+          }
+          else
+          {
+            primary_leg_selection_ = LEG_UNDESIGNATED;
+          }
+          debounce_left_bumper_ = false;
+        }
+        else if (!left_bumped_pressed)
+        {
+          debounce_left_bumper_ = true;
+        }
+      }
+      break;
+    }
+    case (TABLET_JOY):
+      primary_leg_selection_ = static_cast<LegSelection>(android_joy_control_.primary_leg_selection.data);
+      break;
+    case (TABLET_SENSOR):
+      //TODO
+      break;
+    case (KEYBOARD):
+      //TODO
+      break;
+    default:
+      break;
+  }
+}
 
-//Messages
-geometry_msgs::Twist bodyVelocityMsg;
-geometry_msgs::Twist poseMsg; 
-geometry_msgs::Point primaryTipVelocityMsg;
-geometry_msgs::Point secondaryTipVelocityMsg;
+/***********************************************************************************************************************
+  * Right Bumper (R1) Button
+***********************************************************************************************************************/
+void Remote::updateSecondaryLegSelection(void)
+{
+  switch (current_interface_type_)
+  {
+    case (JOYPAD):
+    {
+      //Cycle secondary leg selection on L1 button press (skip slection if already allocated to primary)
+      bool right_bumped_pressed = joypad_control_.buttons[JoypadButtonIndex::RIGHT_BUMPER];
+      if (secondary_leg_state_ == WALKING)
+      {
+        if (right_bumped_pressed && debounce_right_bumper_)
+        {
+          int nextSecondaryLegSelection = (static_cast<int>(secondary_leg_selection_)+1)%(leg_count_ +1);
+          if (nextSecondaryLegSelection == static_cast<int>(primary_leg_selection_) && primary_leg_state_ == MANUAL)
+          {
+            nextSecondaryLegSelection = (static_cast<int>(primary_leg_selection_)+1)%(leg_count_ +1);
+          }
+          
+          if (nextSecondaryLegSelection < leg_count_)
+          {
+            secondary_leg_selection_ = static_cast<LegSelection>(nextSecondaryLegSelection);
+          }
+          else
+          {
+            secondary_leg_selection_ = LEG_UNDESIGNATED;
+          }
+          
+          debounce_right_bumper_ = false;
+        }
+        else if (!right_bumped_pressed)
+        {
+          debounce_right_bumper_ = true;
+        }
+      }
+      break;
+    }
+    case (TABLET_JOY):
+      secondary_leg_selection_ = static_cast<LegSelection>(android_joy_control_.secondary_leg_selection.data);
+      break;
+    case (TABLET_SENSOR):
+      //TODO
+      break;
+    case (KEYBOARD):
+      //TODO
+      break;
+    default:
+      break;
+  }
+}
 
-std_msgs::Int8 systemStateMsg;
-std_msgs::Int8 robotStateMsg;
-std_msgs::Int8 gaitSelectionMsg;
-std_msgs::Int8 posingModeMsg;
-std_msgs::Int8 cruiseControlModeMsg;
-std_msgs::Int8 autoNavigationModeMsg;
-std_msgs::Int8 primaryLegSelectionMsg;
-std_msgs::Int8 secondaryLegSelectionMsg;
-std_msgs::Int8 primaryLegStateMsg;
-std_msgs::Int8 secondaryLegStateMsg;
-std_msgs::Int8 poseResetModeMsg;
-std_msgs::Int8 parameterSelectionMsg;
-std_msgs::Int8 parameterAdjustmentMsg;
+/***********************************************************************************************************************
+  * Left Joystick (L3) Buttons
+***********************************************************************************************************************/
+void Remote::updatePrimaryLegState(void)
+{
+  switch (current_interface_type_)
+  {
+    case (JOYPAD):
+    {
+      //On L3 button press, cycle primary leg state of selected leg
+      bool left_joystick_pressed = joypad_control_.buttons[LEFT_JOYSTICK];
+      if (primary_leg_selection_ != LEG_UNDESIGNATED)
+      {
+        if (left_joystick_pressed && debounce_left_joystick_)
+        {
+          int nextPrimaryLegState = (static_cast<int>(primary_leg_state_)+1)%NUM_LEG_STATES;
+          primary_leg_state_ = static_cast<LegState>(nextPrimaryLegState);
+          //If 2nd leg selection same as 1st whilst 1st is toggling state, then iterate 2nd leg selection
+          if (secondary_leg_selection_ == primary_leg_selection_) 
+          {
+            int nextSecondaryLegSelection = (static_cast<int>(primary_leg_selection_)+1)%(leg_count_);
+            secondary_leg_selection_ = static_cast<LegSelection>(nextSecondaryLegSelection);
+          }
+          debounce_left_joystick_ = false;
+        }
+        else if (!left_joystick_pressed)
+        {
+          debounce_left_joystick_ = true;
+        }
+      }
+      break;
+    }
+    case (TABLET_JOY):
+      primary_leg_state_ = static_cast<LegState>(android_joy_control_.primary_leg_state.data);
+      break;
+    case (TABLET_SENSOR):
+      //TODO
+      break;
+    case (KEYBOARD):
+      //TODO
+      break;
+    default:
+      break;
+  }
+}
 
-//Message indices for input axes (joystick left/right)
-int primaryInputAxisX = 0;
-int primaryInputAxisY = 0;
-int primaryInputAxisZ = 0;
-int secondaryInputAxisX = 0;
-int secondaryInputAxisY = 0;
-int secondaryInputAxisZ = 0;
+/***********************************************************************************************************************
+  * Right Joystick (R3) Button
+***********************************************************************************************************************/
+void Remote::updateSecondaryLegState(void)
+{  
+  switch (current_interface_type_)
+  {
+    case (JOYPAD):
+    {
+      //On R3 button press, cycle primary leg state of selected leg
+      bool right_joystick_pressed = joypad_control_.buttons[RIGHT_JOYSTICK];
+      if (secondary_leg_selection_ != LEG_UNDESIGNATED)
+      {
+        if (right_joystick_pressed && debounce_right_joystick_)
+        {
+          int nextSecondaryLegState = (static_cast<int>(secondary_leg_state_)+1)%NUM_LEG_STATES;
+          secondary_leg_state_ = static_cast<LegState>(nextSecondaryLegState);
+          //If 1st leg selection same as 2nd whilst 2ndst is toggling state, then iterate 1st leg selection
+          if (secondary_leg_selection_ == primary_leg_selection_) 
+          {
+            int nextPrimaryLegSelection = (static_cast<int>(secondary_leg_selection_)+1)%(leg_count_);
+            primary_leg_selection_ = static_cast<LegSelection>(nextPrimaryLegSelection);
+          }
+          debounce_right_joystick_ = false;
+        }
+        else if (!right_joystick_pressed)
+        {
+          debounce_right_joystick_ = true;
+        }
+        posing_mode_ = NO_POSING;
+      }
+      break;
+    }
+    case (TABLET_JOY):
+      secondary_leg_state_ = static_cast<LegState>(android_joy_control_.secondary_leg_state.data);
+      break;
+    case (TABLET_SENSOR):
+      //TODO
+      break;
+    case (KEYBOARD):
+      //TODO
+      break;
+    default:
+      break;
+  }
+}
 
-//Message indices for dpad axes
-int dPadUpDown = 0;
-int dPadLeftRight = 0;
+/***********************************************************************************************************************
+  * Desired Velocity
+***********************************************************************************************************************/
+void Remote::updateDesiredVelocity(void)
+{
+  if (auto_navigation_mode_ == AUTO_NAVIGATION_OFF)
+  {
+    //resetMessages();
+    if (primary_leg_state_ == WALKING)
+    {
+      switch (current_interface_type_)
+      {
+        case (JOYPAD):
+          desired_velocity_msg_.linear.x = joypad_control_.axes[PRIMARY_Y];
+          desired_velocity_msg_.linear.y = joypad_control_.axes[PRIMARY_X];
+          break;
+        case (TABLET_JOY):
+          desired_velocity_msg_.linear.x = android_joy_control_.primary_control_axis.y;
+          desired_velocity_msg_.linear.y = android_joy_control_.primary_control_axis.x;
+          break;
+        case (TABLET_SENSOR): //TODO Refactor
+        {
+          //Logic regarding deciding syropod's moving(Walk Foward/Backward & Strafe Left/Right)
+          double s = params_->imu_sensitivity.data;
+          desired_velocity_msg_.linear.y = round(android_sensor_control_.orientation.x/90.0 * s)/s;
+          desired_velocity_msg_.linear.x = round(android_sensor_control_.orientation.y/90.0 * s)/s;
+          //Zero values exceeding limit
+          if (abs(desired_velocity_msg_.linear.y) > 1.0)
+          {
+            desired_velocity_msg_.linear.y = 0;
+          }
+          break;
+        }
+        case (KEYBOARD):
+          //TODO
+          break;
+        default:
+          break;
+      }
+    }
+    
+    if (secondary_leg_state_ == WALKING && posing_mode_ == NO_POSING)
+    {
+      switch (current_interface_type_)
+      {
+        case (JOYPAD):
+          desired_velocity_msg_.angular.z = joypad_control_.axes[SECONDARY_X];
+          break;
+        case (TABLET_JOY):
+          desired_velocity_msg_.angular.z = -android_joy_control_.secondary_control_axis.x;
+          break;
+        case (TABLET_SENSOR): //TODO Refactor
+        {
+          //Logic regarding deciding syropod's moving(Walk Foward/Backward & Strafe Left/Right)
+          double sensitivity = params_->imu_sensitivity.data;
+          double orientation_x = 0 + round(android_sensor_control_.orientation.x/90.0 * sensitivity)/sensitivity;
+          double orientation_y = 0 + round(android_sensor_control_.orientation.y/90.0 * sensitivity)/sensitivity;
+          //Zero values exceeding limit
+          if (abs(orientation_y) > 1.0)
+          {
+            orientation_y = 0;
+          }
 
-//Message indices for face Buttons
-int buttonA = 0;
-int buttonB = 0;
-int buttonX;
-int buttonY;
+          //Logic regarding deciding syropod's rotation 
+          double compass_inverter = (params_->invert_compass.data ? -1.0 : 1.0);
+          double relative_compass = android_sensor_control_.relative_compass.data * compass_inverter;
 
-//Message indices for bumper buttons (L1/R1)
-int bumperLeft; 
-int bumperRight;
+          //Rotate as required
+          double rotate;
+          if (relative_compass > 0.3 && (abs(orientation_x) + abs(orientation_y) < 0.3))
+          {
+            rotate = ROTATE_COUNTERCLOCKWISE;
+          }
+          else if (relative_compass < -0.3 && (abs(orientation_x) + abs(orientation_y) < 0.3)) 
+          {
+            rotate = ROTATE_CLOCKWISE;
+          }
+          else
+          {
+            rotate = NO_ROTATION;
+          }
+          desired_velocity_msg_.angular.z = rotate;
+          break;
+        }
+        case (KEYBOARD):
+          //TODO
+          break;
+        default:
+          break;
+      }
+    }
+  }
+}
 
-//Message indices for joystick buttons (L3/R3)
-int joyButtonLeft;
-int joyButtonRight;
+/***********************************************************************************************************************
+  * Desired Velocity
+***********************************************************************************************************************/
+void Remote::updateDesiredPose(void)
+{
+  if (auto_navigation_mode_ == AUTO_NAVIGATION_OFF && secondary_leg_state_ == WALKING)
+  {
+    //resetMessages();
+    switch (posing_mode_)
+    {
+      case (X_Y_POSING):
+      {
+        switch (current_interface_type_)
+        {
+          case (JOYPAD):
+            desired_pose_msg_.linear.x = joypad_control_.axes[SECONDARY_Y];
+            desired_pose_msg_.linear.y = joypad_control_.axes[SECONDARY_X];
+            break;
+          case (TABLET_JOY):
+            desired_pose_msg_.linear.x = android_joy_control_.secondary_control_axis.y;
+            desired_pose_msg_.linear.y = android_joy_control_.secondary_control_axis.x;
+            break;
+          case (TABLET_SENSOR):
+            desired_pose_msg_.linear.x = android_sensor_control_.control_axis.y;
+            desired_pose_msg_.linear.y = android_sensor_control_.control_axis.x;
+            break;
+          case (KEYBOARD):
+            //TODO
+            break;
+          default:
+            break;
+        }
+        break;
+      }
+      case (PITCH_ROLL_POSING):
+      {
+        switch (current_interface_type_)
+        {
+          case (JOYPAD):
+            desired_pose_msg_.angular.x = -joypad_control_.axes[SECONDARY_X];
+            desired_pose_msg_.angular.y = joypad_control_.axes[SECONDARY_Y];
+            break;
+          case (TABLET_JOY):
+            desired_pose_msg_.angular.x = android_joy_control_.secondary_control_axis.x;
+            desired_pose_msg_.angular.y = android_joy_control_.secondary_control_axis.y;
+            break;
+          case (TABLET_SENSOR):
+            desired_pose_msg_.angular.x = android_sensor_control_.control_axis.x;
+            desired_pose_msg_.angular.y = android_sensor_control_.control_axis.y;
+            break;
+          case (KEYBOARD):
+            //TODO
+            break;
+          default:
+            break;
+        }
+        break;
+      }
+      case (Z_YAW_POSING):
+      {
+        switch (current_interface_type_)
+        {
+          case (JOYPAD):
+            desired_pose_msg_.linear.z = joypad_control_.axes[SECONDARY_Y];
+            desired_pose_msg_.angular.z = joypad_control_.axes[SECONDARY_X];
+            break;
+          case (TABLET_JOY):
+            desired_pose_msg_.linear.z = android_joy_control_.secondary_control_axis.y;
+            desired_pose_msg_.angular.z = android_joy_control_.secondary_control_axis.x;
+            break;
+          case (TABLET_SENSOR):
+            desired_pose_msg_.linear.z = android_sensor_control_.control_axis.y;
+            desired_pose_msg_.angular.z = android_sensor_control_.control_axis.x;
+            break;
+          case (KEYBOARD):
+            //TODO
+            break;
+          default:
+            break;
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  }
+}
 
-//Message indices for Start/Back buttons
-int backButton;
-int startButton;
-int logitechButton;
+/***********************************************************************************************************************
+  * Primary Tip Velocity
+***********************************************************************************************************************/
+void Remote::updatePrimaryTipVelocity(void)
+{
+  if (auto_navigation_mode_ == AUTO_NAVIGATION_OFF && primary_leg_state_ == MANUAL) 
+  {
+    //resetMessages();
+    switch (current_interface_type_)
+    {
+      case (JOYPAD):
+      {
+        // Correct trigger
+        double corrected_primary_axis_z;
+        double axis_inverter = (joypad_control_.buttons[LEFT_BUMPER] ? -1.0 : 1.0);
+        if (joypad_control_.axes[PRIMARY_Z] == 0.0 && primary_z_axis_corrected_)
+        {
+          corrected_primary_axis_z = 0.0;
+        }
+        else
+        {
+          corrected_primary_axis_z = -(joypad_control_.axes[PRIMARY_Z] - 1.0) / 2.0;
+          primary_z_axis_corrected_ = false;
+        }
+        primary_tip_velocity_msg_.x = joypad_control_.axes[PRIMARY_Y];
+        primary_tip_velocity_msg_.y = joypad_control_.axes[PRIMARY_X];
+        primary_tip_velocity_msg_.z = corrected_primary_axis_z * axis_inverter;
+        break;
+      }
+      case (TABLET_JOY):
+      {
+        primary_tip_velocity_msg_.x = android_joy_control_.primary_control_axis.y;
+        primary_tip_velocity_msg_.y = android_joy_control_.primary_control_axis.x;
+        primary_tip_velocity_msg_.z = android_joy_control_.primary_control_axis.z;
+        break;
+      }
+      case (TABLET_SENSOR):
+        //TODO
+        break;
+      case (KEYBOARD):
+        //TODO
+        break;
+      default:
+        break;
+    }
+  }
+}
 
-//Inversion booleans for control axes
-bool invertPrimaryAxisX;
-bool invertPrimaryAxisY;
-bool invertPrimaryAxisZ;
-bool invertSecondaryAxisX;
-bool invertSecondaryAxisY;
-bool invertSecondaryAxisZ;
+/***********************************************************************************************************************
+  * Secondary Tip Velocity
+***********************************************************************************************************************/
+void Remote::updateSecondaryTipVelocity(void)
+{
+  if (auto_navigation_mode_ == AUTO_NAVIGATION_OFF && secondary_leg_state_ == MANUAL) 
+  {
+    //resetMessages();
+    switch (current_interface_type_)
+    {
+      case (JOYPAD):
+      {
+        // Correct trigger
+        double corrected_secondary_axis_z;
+        double axis_inverter = (joypad_control_.buttons[RIGHT_BUMPER] ? -1.0 : 1.0);
+        if (joypad_control_.axes[SECONDARY_Z] == 0.0 && secondary_z_axis_corrected_)
+        {
+          corrected_secondary_axis_z = 0.0;
+        }
+        else
+        {
+          corrected_secondary_axis_z = -(joypad_control_.axes[SECONDARY_Z] - 1.0) / 2.0;
+          secondary_z_axis_corrected_ = false;
+        }
+        secondary_tip_velocity_msg_.x = joypad_control_.axes[SECONDARY_Y];
+        secondary_tip_velocity_msg_.y = joypad_control_.axes[SECONDARY_X];
+        secondary_tip_velocity_msg_.z = corrected_secondary_axis_z * axis_inverter;
+        break;
+      }
+      case (TABLET_JOY):
+      {
+        secondary_tip_velocity_msg_.x = android_joy_control_.secondary_control_axis.y;
+        secondary_tip_velocity_msg_.y = android_joy_control_.secondary_control_axis.x;
+        secondary_tip_velocity_msg_.z = android_joy_control_.secondary_control_axis.z;
+        break;
+      }
+      case (TABLET_SENSOR):
+        //TODO
+        break;
+      case (KEYBOARD):
+        //TODO
+        break;
+      default:
+        break;
+    }
+  }
+}
 
-//Debounce booleans for buttons
-bool debounceLogitech = true;
-bool debounceStart = true;
-bool debounceBack = true;
-bool debounceA = true;
-bool debounceB = true;
-bool debounceX = true;
-bool debounceY = true;
-bool debounceDPad = true;
-bool debounceBumperRight = true;
-bool debounceBumperLeft = true;
-bool debounceJoyLeft = true;
-bool debounceJoyRight = true;
+/***********************************************************************************************************************
+  * Reset Messages
+***********************************************************************************************************************/
+void Remote::resetMessages(void)
+{
+  //Init message values
+	desired_velocity_msg_.linear.x = 0.0;
+	desired_velocity_msg_.linear.y = 0.0;
+	desired_velocity_msg_.linear.z = 0.0;
+	desired_velocity_msg_.angular.x = 0.0;
+	desired_velocity_msg_.angular.y = 0.0;
+	desired_velocity_msg_.angular.z = 0.0;
+	desired_pose_msg_.linear.x = 0.0;
+	desired_pose_msg_.linear.y = 0.0;
+	desired_pose_msg_.linear.z = 0.0;	
+	desired_pose_msg_.angular.x = 0.0;
+	desired_pose_msg_.angular.y = 0.0;
+	desired_pose_msg_.angular.z = 0.0; 
+	primary_tip_velocity_msg_.x = 0.0;
+	primary_tip_velocity_msg_.y = 0.0;
+	primary_tip_velocity_msg_.z = 0.0;
+	secondary_tip_velocity_msg_.x = 0.0;
+	secondary_tip_velocity_msg_.y = 0.0;
+	secondary_tip_velocity_msg_.z = 0.0;
+  
+  parameter_adjustment_msg_.data = 0.0;
+}
 
-//Miscelanous control variables
-int publishRate;
-bool invertCompass;
-bool invertImu;
-bool correctPrimaryTrigger = true;
-bool correctSecondaryTrigger = true;
-int imuSensitivity;
-int parameterAdjustmentSensitivity;
-int konamiCode = 0;
+/***********************************************************************************************************************
+  * Publish Messages
+***********************************************************************************************************************/
+void Remote::publishMessages(void)
+{
+  //Assign message values
+  system_state_msg_.data = static_cast<int>(system_state_);
+  robot_state_msg_.data = static_cast<int>(robot_state_);
+  gait_selection_msg_.data = static_cast<int>(gait_selection_);
+  posing_mode_msg_.data = static_cast<int>(posing_mode_);
+  cruise_control_mode_msg_.data = static_cast<int>(cruise_control_mode_);
+  auto_navigation_mode_msg_.data = static_cast<int>(auto_navigation_mode_);
+  primary_leg_selection_msg_.data = static_cast<int>(primary_leg_selection_);
+  secondary_leg_selection_msg_.data = static_cast<int>(secondary_leg_selection_);
+  primary_leg_state_msg_.data = static_cast<int>(primary_leg_state_);
+  secondary_leg_state_msg_.data = static_cast<int>(secondary_leg_state_);
+  parameter_selection_msg_.data = static_cast<int>(parameter_selection_);
+  pose_reset_mode_msg_.data = static_cast<int>(pose_reset_mode_);
+  
+  //Publish messages
+  system_state_pub_.publish(system_state_msg_);
+  robot_state_pub_.publish(robot_state_msg_);
+  desired_velocity_pub_.publish(desired_velocity_msg_);	
+  desired_pose_pub_.publish(desired_pose_msg_);
+  primary_tip_velocity_pub_.publish(primary_tip_velocity_msg_);
+  secondary_tip_velocity_pub_.publish(secondary_tip_velocity_msg_);    
+    
+  gait_selection_pub_.publish(gait_selection_msg_);
+  posing_mode_pub_.publish(posing_mode_msg_);
+  cruise_control_pub_.publish(cruise_control_mode_msg_);
+  auto_navigation_pub_.publish(auto_navigation_mode_msg_);    
+  primary_leg_selection_pub_.publish(primary_leg_selection_msg_);
+  secondary_leg_selection_pub_.publish(secondary_leg_selection_msg_);
+  primary_leg_state_pub_.publish(primary_leg_state_msg_);
+  secondary_leg_state_pub_.publish(secondary_leg_state_msg_);    
+  parameter_selection_pub_.publish(parameter_selection_msg_);
+  parameter_adjustment_pub_.publish(parameter_adjustment_msg_);    
+  pose_reset_pub_.publish(pose_reset_mode_msg_);
+  
+}
+
+/***********************************************************************************************************************
+  * Apply dead zone to joystick input axis
+***********************************************************************************************************************/
+void Remote::applyDeadZone(geometry_msgs::Point* axis)
+{
+  double axis_magnitude = sqrt((axis->x * axis->x) + (axis->y * axis->y));
+  double axis_x_norm = axis->x / axis_magnitude;
+  double axis_y_norm = axis->y / axis_magnitude;
+  if(axis_magnitude < DEAD_ZONE)
+  {
+    axis->x = 0.0;
+    axis->y = 0.0;
+  }
+  else
+  {
+    axis->x = axis_x_norm * ((axis_magnitude - DEAD_ZONE) / (1 - DEAD_ZONE));
+    axis->y = axis_y_norm * ((axis_magnitude - DEAD_ZONE) / (1 - DEAD_ZONE));
+  }
+}
 
 /***********************************************************************************************************************
   * Joy callback
 ***********************************************************************************************************************/
-void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
+void Remote::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
-	/***********************************************************************************************************************
-    * Logitech button
-  ***********************************************************************************************************************/
-	if (joy->buttons[logitechButton] && debounceLogitech)
-	{
-		int nextSystemState = (static_cast<int>(systemState)+1)%NUM_SYSTEM_STATES;
-		systemState = static_cast<SystemState>(nextSystemState);
-		debounceLogitech = false;
-	}
-	else if (!joy->buttons[logitechButton])
-	{		
-		debounceLogitech = true;
-	}
-	
-	/***********************************************************************************************************************
-    * Prevent state changes if system is suspended + Konami Code (Approved by Alberto)
-  ***********************************************************************************************************************/
-	if (systemState == SUSPENDED)
-	{
-		if ((konamiCode == 0 && joy->axes[dPadUpDown] == 1) ||
-			  (konamiCode == 1 && joy->axes[dPadUpDown] == 1) ||
-				(konamiCode == 2 && joy->axes[dPadUpDown] == -1) ||
-				(konamiCode == 3 && joy->axes[dPadUpDown] == -1) ||
-				(konamiCode == 4 && joy->axes[dPadLeftRight] == 1) ||
-				(konamiCode == 5 && joy->axes[dPadLeftRight] == -1) ||
-				(konamiCode == 6 && joy->axes[dPadLeftRight] == 1) ||
-				(konamiCode == 7 && joy->axes[dPadLeftRight] == -1) ||
-				(konamiCode == 8 && joy->buttons[buttonB] == 1) ||
-				(konamiCode == 9 && joy->buttons[buttonA] == 1))
-		{
-			konamiCode++;
-		}
-		else if (konamiCode == 10)
-		{
-			std::string command_string = "play " + ros::package::getPath(syropod_type + "_syropod") + "/.easter_egg.mp3 -q";
-			system(command_string.c_str());
-			konamiCode = 0;
-		}
-		return;
-	}
-	else
-	{
-		konamiCode = 0;
-	}	
-
-  /***********************************************************************************************************************
-    * Start/Back buttons
-  ***********************************************************************************************************************/
-  //On Start button press, iterate system state forward
-  if (joy->buttons[startButton] && debounceStart) //Start button
-  {
-    int nextRobotState = std::min((static_cast<int>(robotState)+1), NUM_ROBOT_STATES-1);
-    robotState = static_cast<RobotState>(nextRobotState);
-    debounceStart = false;
-  }
-  else if (!joy->buttons[startButton])
-  {
-    debounceStart = true;
-  }
-  
-  //On Back button press, iterate system state backward
-  if (joy->buttons[backButton] && debounceBack) //Back button
-  {
-    int nextRobotState = std::max((static_cast<int>(robotState)-1), 0);
-    robotState = static_cast<RobotState>(nextRobotState);
-    debounceBack = false;
-  }	
-  else if (!joy->buttons[backButton])
-  {
-    debounceBack = true;
-  }
- 
-  /***********************************************************************************************************************
-  * Face Buttons
-  ***********************************************************************************************************************/
-  //Cycle gaits on A button press
-  if (joy->buttons[buttonA] && debounceA)
-  {    
-    int nextGaitSelection = (static_cast<int>(gaitSelection)+1)%NUM_GAIT_SELECTIONS;
-    gaitSelection = static_cast<GaitDesignation>(nextGaitSelection);
-    debounceA = false;
-  }  
-  else if (!joy->buttons[buttonA])
-  {
-    debounceA = true;
-  }
-  
-  //Cycle posing mode on B button press
-  if (joy->buttons[buttonB] && debounceB)
-  {
-    int nextPosingMode = (static_cast<int>(posingMode)+1)%NUM_POSING_MODES;		
-    posingMode = static_cast<PosingMode>(nextPosingMode);
-		if (secondaryLegState != MANUAL)
-		{
-			secondaryLegSelection = LEG_UNDESIGNATED;
-		}
-    debounceB = false;
-  }
-  else if (!joy->buttons[buttonB])
-  {
-    debounceB = true;
-  }
-  
-  //Cycle cruise control mode on X button press
-  if (joy->buttons[buttonX] && debounceX)
-  {
-    int nextCruiseControlMode = (static_cast<int>(cruiseControlMode)+1)%NUM_CRUISE_CONTROL_MODES;
-    cruiseControlMode = static_cast<CruiseControlMode>(nextCruiseControlMode);
-    debounceX = false;
-  }
-  else if (!joy->buttons[buttonX])
-  {
-    debounceX = true;
-  }
-  
-  //Cycle auto navigation mode on Y button press
-  if (joy->buttons[buttonY] && debounceY)
-  {    
-    int nextAutoNavigationMode = (static_cast<int>(autoNavigationMode)+1)%NUM_AUTO_NAVIGATION_MODES;
-    autoNavigationMode = static_cast<AutoNavigationMode>(nextAutoNavigationMode);
-    debounceY = false;
-    bodyVelocityMsg.linear.x = 0.0;
-    bodyVelocityMsg.linear.y = 0.0;
-    bodyVelocityMsg.angular.z = 0.0;
-  }  
-  else if (!joy->buttons[buttonY])
-  {
-    debounceY = true;
-  }
-
-  /***********************************************************************************************************************
-  * D-Pad Buttons
-  ***********************************************************************************************************************/
-  parameterAdjustmentMsg.data = joy->axes[dPadUpDown]; //Message with 1.0 or -1.0 to increment/decrement parameter
-  
-  //Cycle parameter selction on left/right dpad press
-  if (joy->axes[dPadLeftRight] && debounceDPad)
-  {
-    int nextParameterSelection = (static_cast<int>(parameterSelection)-int(joy->axes[dPadLeftRight]))%NUM_PARAMETER_SELECTIONS;
-    if (nextParameterSelection < 0)
-    {
-      nextParameterSelection += NUM_PARAMETER_SELECTIONS;
-    }
-    parameterSelection = static_cast<ParameterSelection>(nextParameterSelection);
-    debounceDPad = false;
-  }
-  else if (!joy->buttons[dPadLeftRight])
-  {
-    debounceDPad = true;
-  }
-
-  /***********************************************************************************************************************
-   * Bumper (L1/R1) Buttons
-  ***********************************************************************************************************************/
-  //Cycle primary leg selection on R1 button press (skip slection if already allocated to secondary)
-  if (primaryLegState == WALKING)
-  {
-    if (joy->buttons[bumperLeft] && debounceBumperLeft)
-    {
-      int nextPrimaryLegSelection = (static_cast<int>(primaryLegSelection)+1)%(num_legs+1);
-      if (nextPrimaryLegSelection == static_cast<int>(secondaryLegSelection) && secondaryLegState == MANUAL)
-      {
-	nextPrimaryLegSelection = (static_cast<int>(secondaryLegSelection)+1)%(num_legs+1);
-      }
-      
-      if (nextPrimaryLegSelection < num_legs)
-      {
-	primaryLegSelection = static_cast<LegSelection>(nextPrimaryLegSelection);
-      }
-      else
-      {
-	primaryLegSelection = LEG_UNDESIGNATED;
-      }
-      
-      debounceBumperLeft = false;
-    }
-    else if (!joy->buttons[bumperLeft])
-    {
-      debounceBumperLeft = true;
-    }
-  }
-  //If selected leg is in manual state, on R1 held, invert z direction
-  else
-  {
-    manualPrimaryZInvert = static_cast<bool>(joy->buttons[bumperLeft]);
-  }
-  
-  //Cycle secondary leg selection on L1 button press (skip slection if already allocated to primary)
-  if (secondaryLegState == WALKING)
-  {     
-    if (joy->buttons[bumperRight] && debounceBumperRight)
-    {
-      int nextSecondaryLegSelection = (static_cast<int>(secondaryLegSelection)+1)%(num_legs+1);
-      if (nextSecondaryLegSelection == static_cast<int>(primaryLegSelection) && primaryLegState == MANUAL)
-      {
-	nextSecondaryLegSelection = (static_cast<int>(primaryLegSelection)+1)%(num_legs+1);
-      }
-      
-      if (nextSecondaryLegSelection < num_legs)
-      {
-	secondaryLegSelection = static_cast<LegSelection>(nextSecondaryLegSelection);
-      }
-      else
-      {
-	secondaryLegSelection = LEG_UNDESIGNATED;
-      }
-      
-      debounceBumperRight = false;
-    }
-    else if (!joy->buttons[bumperRight])
-    {
-      debounceBumperRight = true;
-    }
-  }
-  //If selected leg is in manual state, on L1 held, invert z direction
-  else
-  {
-    manualSecondaryZInvert = static_cast<bool>(joy->buttons[bumperRight]);
-  }
-  
-  
-  /***********************************************************************************************************************
-  * Joystick (L3/R3) Buttons
-  ***********************************************************************************************************************/
-  
-  //On L3 button press, cycle primary leg state of selected leg
-  if (primaryLegSelection != LEG_UNDESIGNATED)
-  {
-    if (joy->buttons[joyButtonLeft] && debounceJoyLeft)
-    {
-      int nextPrimaryLegState = (static_cast<int>(primaryLegState)+1)%NUM_LEG_STATES;
-      primaryLegState = static_cast<LegState>(nextPrimaryLegState);
-      //If 2nd leg selection same as 1st whilst 1st is toggling state, then iterate 2nd leg selection
-      if (secondaryLegSelection == primaryLegSelection) 
-      {
-	int nextSecondaryLegSelection = (static_cast<int>(primaryLegSelection)+1)%(num_legs);
-	secondaryLegSelection = static_cast<LegSelection>(nextSecondaryLegSelection);
-      }
-      debounceJoyLeft = false;
-    }
-    else if (!joy->buttons[joyButtonRight])
-    {
-      debounceJoyLeft = true;
-    }
-  }
-  else
-  {
-    //TBD Docking procedure
-    /*
-    if (joy->buttons[joyButtonLeft] && debounceJoyLeft)
-    {
-      int nextDockingState = (static_cast<int>(dockingState)+1)%NUM_DOCKING_STATES;
-      dockingState = static_cast<DockingState>(nextDockingState);
-      debounceJoyLeft = false;
-    }
-    else if (!joy->buttons[joyButtonLeft])
-    {
-      debounceJoyLeft = true;
-    }
-    */    
-  }
-  
-  //On R3 button press, cycle primary leg state of selected leg
-  if (secondaryLegSelection != LEG_UNDESIGNATED)
-  {
-    if (joy->buttons[joyButtonRight] && debounceJoyRight)
-    {
-      int nextSecondaryLegState = (static_cast<int>(secondaryLegState)+1)%NUM_LEG_STATES;
-      secondaryLegState = static_cast<LegState>(nextSecondaryLegState);
-      //If 1st leg selection same as 2nd whilst 2ndst is toggling state, then iterate 1st leg selection
-      if (secondaryLegSelection == primaryLegSelection) 
-      {
-	int nextPrimaryLegSelection = (static_cast<int>(secondaryLegSelection)+1)%(num_legs);
-	primaryLegSelection = static_cast<LegSelection>(nextPrimaryLegSelection);
-      }
-      debounceJoyRight = false;
-    }
-    else if (!joy->buttons[joyButtonRight])
-    {
-      debounceJoyRight = true;
-    }
-    posingMode = NO_POSING;
-  }
-  //On R3 button press, if no leg is currently selected, set pose reset mode depending on current posing mode instead
-  else 
-  {
-    if (joy->buttons[joyButtonRight])
-    {
-      switch(posingMode)
-      {
-	case(NO_POSING):
-	  poseResetMode = ALL_RESET;
-	  break;
-	  break;
-	case(X_Y_POSING):
-	  poseResetMode = X_Y_RESET;
-	  break;
-	case(PITCH_ROLL_POSING):
-	  poseResetMode = PITCH_ROLL_RESET;
-	  break;
-	case(Z_YAW_POSING):
-	  poseResetMode = Z_YAW_RESET;
-	  break;
-      }
-    }
-    else
-    {
-      poseResetMode = NO_RESET;
-    }    
-  }
-
-  /***********************************************************************************************************************
-  * Primary/Secondary Control Axes (Left/Right Joystick)
-  ***********************************************************************************************************************/
-  
-  //Trigger axes from /joy are defaulted to zero until the first trigger pull,
-  //This corrects this and then changes the range from 1.0->-1.0 to 0.0->1.0.
-  double correctedPrimaryAxisZ;
-  double correctedSecondaryAxisZ;
-  if (joy->axes[primaryInputAxisZ] == 0.0 && correctPrimaryTrigger)
-  {
-    correctedPrimaryAxisZ = 0.0;
-  }
-  else
-  {
-    correctedPrimaryAxisZ = -(joy->axes[primaryInputAxisZ] - 1.0)/2.0;
-    correctPrimaryTrigger = false;
-  }
-  
-  if (joy->axes[secondaryInputAxisZ] == 0.0 && correctSecondaryTrigger)
-  {
-    correctedSecondaryAxisZ = 0.0;
-  }
-  else
-  {
-    correctedSecondaryAxisZ = -(joy->axes[secondaryInputAxisZ] - 1.0)/2.0;
-    correctSecondaryTrigger = false;  
-  }
-  
-  //Turn off all velocity and pose inputs from joystick if autoNavigation is on
-  if (autoNavigationMode == AUTO_NAVIGATION_OFF) 
-  {
-    //Reset message values
-    bodyVelocityMsg.linear.x = 0.0;
-    bodyVelocityMsg.linear.y = 0.0;
-    bodyVelocityMsg.linear.z = 0.0;
-    bodyVelocityMsg.angular.x = 0.0;
-    bodyVelocityMsg.angular.y = 0.0;
-    bodyVelocityMsg.angular.z = 0.0;
-    poseMsg.linear.x = 0.0;
-    poseMsg.linear.y = 0.0;
-    poseMsg.linear.z = 0.0;	
-    poseMsg.angular.x = 0.0;
-    poseMsg.angular.y = 0.0;
-    poseMsg.angular.z = 0.0; 
-    primaryTipVelocityMsg.x = 0.0;
-    primaryTipVelocityMsg.y = 0.0;
-    primaryTipVelocityMsg.z = 0.0;
-    secondaryTipVelocityMsg.x = 0.0;
-    secondaryTipVelocityMsg.y = 0.0;
-    secondaryTipVelocityMsg.z = 0.0;
-    
-    //Primary Control Axis (Left joystick) --Does not change with posing mode
-    if (primaryLegState == MANUAL)
-    {
-      primaryTipVelocityMsg.x = joy->axes[primaryInputAxisY]*(invertPrimaryAxisY ? -1.0:1.0);
-      primaryTipVelocityMsg.y = joy->axes[primaryInputAxisX]*(invertPrimaryAxisX ? -1.0:1.0);
-      primaryTipVelocityMsg.z = correctedPrimaryAxisZ*(invertPrimaryAxisZ!=manualPrimaryZInvert ? -1.0:1.0);
-    }
-    else if (primaryLegState == WALKING)
-    {
-      bodyVelocityMsg.linear.x = joy->axes[primaryInputAxisY]*(invertPrimaryAxisY ? -1.0:1.0);
-      bodyVelocityMsg.linear.y = joy->axes[primaryInputAxisX]*(invertPrimaryAxisX ? -1.0:1.0);
-    }    
-    
-    //Secondary Control Axis (Right joystick)  --Only changes with posing mode if in walking state
-    if (secondaryLegState == MANUAL)
-    {
-      secondaryTipVelocityMsg.x = joy->axes[secondaryInputAxisY]*(invertSecondaryAxisY ? -1.0:1.0);
-      secondaryTipVelocityMsg.y = joy->axes[secondaryInputAxisX]*(invertSecondaryAxisX ? -1.0:1.0);
-      secondaryTipVelocityMsg.z = correctedSecondaryAxisZ*(invertSecondaryAxisZ!=manualSecondaryZInvert ? -1.0:1.0);
-    }
-    else if (secondaryLegState == WALKING)
-    {
-      switch(posingMode)
-      {
-	case(NO_POSING):
-	{
-	  //Secondary Control Axis (Right joystick)  
-	  bodyVelocityMsg.angular.z = joy->axes[secondaryInputAxisX]*(invertSecondaryAxisX ? -1.0:1.0);
-	  break;
-	}
-	case(X_Y_POSING):
-	{
-	  //Secondary Control Axis (Right joystick)
-	  poseMsg.linear.x = joy->axes[secondaryInputAxisY]*(invertSecondaryAxisY ? -1.0:1.0);
-	  poseMsg.linear.y = joy->axes[secondaryInputAxisX]*(invertSecondaryAxisX ? -1.0:1.0);
-	  break;
-	}
-	case(PITCH_ROLL_POSING):
-	{
-	  poseMsg.angular.x = -joy->axes[secondaryInputAxisX]*(invertSecondaryAxisX ? -1.0:1.0);
-	  poseMsg.angular.y = joy->axes[secondaryInputAxisY]*(invertSecondaryAxisY ? -1.0:1.0);
-	  break;
-	}
-	case(Z_YAW_POSING):
-	{
-	  poseMsg.linear.z = joy->axes[secondaryInputAxisY]*(invertSecondaryAxisY ? -1.0:1.0);	
-	  poseMsg.angular.z = joy->axes[secondaryInputAxisX]*(invertSecondaryAxisX ? -1.0:1.0);  
-	  break;
-	}
-      }
-    }
-  }    
-} 
+  current_priority_interface_ = "joy";
+  current_interface_type_ = JOYPAD;
+  priority_interface_overridden_ = true;
+  joypad_control_ = *joy;
+}
 
 /***********************************************************************************************************************
   * Callback for android virtual joypad control of syropod
-  * 	Note: Currently ported from control scheme designed for logitech joypad. 
-  * 	Needs a redesign to make full use of a tablet based virtual controller
 ***********************************************************************************************************************/ 
-void androidJoyCallback(const syropod_remote::androidJoy::ConstPtr& control)
+void Remote::androidJoyCallback(syropod_remote::AndroidJoy::ConstPtr& control)
 {
-  systemState = static_cast<SystemState>(control->systemState.data);
-  gaitSelection = static_cast<GaitDesignation>(control->gaitSelection.data);
-  posingMode = static_cast<PosingMode>(control->posingMode.data);
-  cruiseControlMode = static_cast<CruiseControlMode>(control->cruiseControlMode.data);
-  autoNavigationMode = static_cast<AutoNavigationMode>(control->autoNavigationMode.data);
-  primaryLegSelection = static_cast<LegSelection>(control->primaryLegSelection.data);
-  secondaryLegSelection = static_cast<LegSelection>(control->secondaryLegSelection.data);
-  primaryLegState = static_cast<LegState>(control->primaryLegState.data);
-  secondaryLegState = static_cast<LegState>(control->secondaryLegState.data);
-  parameterSelection = static_cast<ParameterSelection>(control->parameterSelection.data);
-  
-  parameterAdjustmentMsg.data = control->parameterAdjustment.data; //Should be 0.0, 1.0 or -1.0
-
-  if (autoNavigationMode == AUTO_NAVIGATION_OFF) 
+  // Control turning off/on overiding default interface with this interface
+  if (control->override_priority_interface.data && !priority_interface_overridden_)
   {
-    //Reset message values
-    bodyVelocityMsg.linear.x = 0.0;
-    bodyVelocityMsg.linear.y = 0.0;
-    bodyVelocityMsg.linear.z = 0.0;
-    bodyVelocityMsg.angular.x = 0.0;
-    bodyVelocityMsg.angular.y = 0.0;
-    bodyVelocityMsg.angular.z = 0.0;
-    poseMsg.linear.x = 0.0;
-    poseMsg.linear.y = 0.0;
-    poseMsg.linear.z = 0.0;	
-    poseMsg.angular.x = 0.0;
-    poseMsg.angular.y = 0.0;
-    poseMsg.angular.z = 0.0; 
-    primaryTipVelocityMsg.x = 0.0;
-    primaryTipVelocityMsg.y = 0.0;
-    primaryTipVelocityMsg.z = 0.0;
-    secondaryTipVelocityMsg.x = 0.0;
-    secondaryTipVelocityMsg.y = 0.0;
-    secondaryTipVelocityMsg.z = 0.0;
-    
-    //Primary Control Axis --Does not change with posing mode
-    if (primaryLegState == MANUAL)
+    priority_interface_overridden_ = true;
+    current_priority_interface_ = control->id_name.data;
+  }
+  else if (!control->override_priority_interface.data && priority_interface_overridden_)
+  {
+    if (control->id_name.data == current_priority_interface_)
     {
-      primaryTipVelocityMsg.x = control->primaryControlAxis.y*(invertPrimaryAxisY ? -1.0:1.0);
-      primaryTipVelocityMsg.y = control->primaryControlAxis.x*(invertPrimaryAxisX ? -1.0:1.0);
-      primaryTipVelocityMsg.z = control->primaryControlAxis.z*(invertPrimaryAxisZ!=manualPrimaryZInvert ? -1.0:1.0);
+      priority_interface_overridden_ = false;
+      current_priority_interface_ = default_priority_interface_;
     }
-    else if (primaryLegState == WALKING)
-    {
-      bodyVelocityMsg.linear.x = control->primaryControlAxis.y*(invertPrimaryAxisY ? -1.0:1.0);
-      bodyVelocityMsg.linear.y = control->primaryControlAxis.x*(invertPrimaryAxisX ? -1.0:1.0);
-    }    
-    
-    //Secondary Control Axis (Right joystick)  --Only changes with posing mode if in walking state
-    if (secondaryLegState == MANUAL)
-    {
-      secondaryTipVelocityMsg.x = control->secondaryControlAxis.y*(invertSecondaryAxisY ? -1.0:1.0);
-      secondaryTipVelocityMsg.y = control->secondaryControlAxis.x*(invertSecondaryAxisX ? -1.0:1.0);
-      secondaryTipVelocityMsg.z = control->secondaryControlAxis.z*(invertSecondaryAxisZ!=manualSecondaryZInvert ? -1.0:1.0);
-    }
-    else if (secondaryLegState == WALKING)
-    {
-      switch(posingMode)
-      {
-	case(NO_POSING):
-	{
-	  //Secondary Control Axis (Right joystick)  
-	  bodyVelocityMsg.angular.z = -control->secondaryControlAxis.x*(invertSecondaryAxisX ? -1.0:1.0);
-	  break;
-	}
-	case(X_Y_POSING):
-	{
-	  //Secondary Control Axis (Right joystick)
-	  poseMsg.linear.x = control->secondaryControlAxis.y*(invertSecondaryAxisY ? -1.0:1.0);
-	  poseMsg.linear.y = control->secondaryControlAxis.x*(invertSecondaryAxisX ? -1.0:1.0);
-	  break;
-	}
-	case(PITCH_ROLL_POSING):
-	{
-	  poseMsg.angular.x = -control->secondaryControlAxis.x*(invertSecondaryAxisX ? -1.0:1.0);
-	  poseMsg.angular.y = control->secondaryControlAxis.y*(invertSecondaryAxisY ? -1.0:1.0);
-	  break;
-	}
-	case(Z_YAW_POSING):
-	{
-	  poseMsg.linear.z = control->secondaryControlAxis.y*(invertSecondaryAxisY ? -1.0:1.0);	
-	  poseMsg.angular.z = control->secondaryControlAxis.x*(invertSecondaryAxisX ? -1.0:1.0);  
-	  break;
-	}
-      }
-    }
-  }      
+  }
+
+  // Continue only if current interface has priority
+  if (control->id_name.data == current_priority_interface_)
+  {
+    android_joy_control_ = *control;
+    current_interface_type_ = TABLET_JOY;
+    applyDeadZone(&(android_joy_control_.primary_control_axis));
+    applyDeadZone(&(android_joy_control_.secondary_control_axis));
+  }
 }
 
 /***********************************************************************************************************************
   * Callback for android imu sensor control of syropod
-  * 	Note: Currently ported from control scheme designed for logitech joypad. 
-  * 	Needs a redesign to make full use of a tablet based virtual controller
 ***********************************************************************************************************************/ 
-void androidSensorCallback(const syropod_remote::androidSensor::ConstPtr& control)
+void Remote::androidSensorCallback(const syropod_remote::AndroidSensor::ConstPtr& control)
 {
-  float orientationX    = 0.0;
-  float orientationY    = 0.0;
-  float relativeCompass = 0.0;
-  float rotate          = 0.0;
-
-  //Logic regarding deciding syropod's start/stop 
-  systemState = static_cast<SystemState>(control->systemState.data);
-
-  //Logic regarding deciding syropod's moving(Walk Foward/Backward & Strafe Left/Right)
-  orientationX = 0 + round(control->orientation.x/90*imuSensitivity)/imuSensitivity;
-  orientationY = 0 + round(control->orientation.y/90*imuSensitivity)/imuSensitivity;
-
-  //Invert according to parameters
-  orientationX *= (invertPrimaryAxisX!=invertImu ? -1.0:1.0);
-  orientationY *= (invertPrimaryAxisY!=invertImu ? -1.0:1.0);
-
-  //Zero values exceeding limit
-  if (std::abs(orientationY) > 1.0)
+  // Control turning off/on overiding default interface with this interface
+  if (control->override_priority_interface.data && !priority_interface_overridden_)
   {
-    orientationY = 0;
+    priority_interface_overridden_ = true;
+    current_priority_interface_ = control->id_name.data;
   }
-
-  //Logic regarding deciding syropod's rotation 
-  relativeCompass = control->relativeCompass.data*(invertCompass ? -1.0:1.0);
-
-  //Rotate as required
-  if (relativeCompass > 0.3 && (std::abs(orientationX)+std::abs(orientationY)<0.3))
+  else if (!control->override_priority_interface.data && priority_interface_overridden_)
   {
-    rotate = ROTATE_COUNTERCLOCKWISE;
-  }
-  else if (relativeCompass<-0.3 && (std::abs(orientationX)+std::abs(orientationY)<0.3)) 
-  {
-    rotate = ROTATE_CLOCKWISE;
-  }
-  else
-  {
-    rotate = NOT_ROTATE;
-  }
-
-  if (autoNavigationMode == AUTO_NAVIGATION_OFF) 
-  {
-    //Reset message values
-    bodyVelocityMsg.linear.x = 0.0;
-    bodyVelocityMsg.linear.y = 0.0;
-    bodyVelocityMsg.linear.z = 0.0;
-    bodyVelocityMsg.angular.x = 0.0;
-    bodyVelocityMsg.angular.y = 0.0;
-    bodyVelocityMsg.angular.z = 0.0;
-    poseMsg.linear.x = 0.0;
-    poseMsg.linear.y = 0.0;
-    poseMsg.linear.z = 0.0;	
-    poseMsg.angular.x = 0.0;
-    poseMsg.angular.y = 0.0;
-    poseMsg.angular.z = 0.0; 
-    primaryTipVelocityMsg.x = 0.0;
-    primaryTipVelocityMsg.y = 0.0;
-    primaryTipVelocityMsg.z = 0.0;
-    secondaryTipVelocityMsg.x = 0.0;
-    secondaryTipVelocityMsg.y = 0.0;
-    secondaryTipVelocityMsg.z = 0.0;
-    
-    //Primary Control Axis --Does not change with posing mode
-    if (primaryLegState == WALKING)
+    if (control->id_name.data == current_priority_interface_)
     {
-      bodyVelocityMsg.linear.x = orientationY*(invertPrimaryAxisY ? -1.0:1.0);
-      bodyVelocityMsg.linear.y = orientationX*(invertPrimaryAxisX ? -1.0:1.0);
-    }    
-    
-    //Secondary Control Axis (Right joystick)
-    if (secondaryLegState == WALKING)
-    {
-      switch(posingMode)
-      {
-	case(NO_POSING):
-	{
-	  //Secondary Control Axis (Right joystick)  
-	  bodyVelocityMsg.angular.z = -rotate*(invertSecondaryAxisX ? -1.0:1.0);
-	  break;
-	}
-	case(X_Y_POSING):
-	{
-	  //Secondary Control Axis (Right joystick)
-	  poseMsg.linear.x = control->controlAxis.y*(invertSecondaryAxisY ? -1.0:1.0);
-	  poseMsg.linear.y = control->controlAxis.x*(invertSecondaryAxisX ? -1.0:1.0);
-	  break;
-	}
-	case(PITCH_ROLL_POSING):
-	{
-	  poseMsg.angular.x = -control->controlAxis.x*(invertSecondaryAxisX ? -1.0:1.0);
-	  poseMsg.angular.y = control->controlAxis.y*(invertSecondaryAxisY ? -1.0:1.0);
-	  break;
-	}
-	case(Z_YAW_POSING):
-	{
-	  poseMsg.linear.z = control->controlAxis.y*(invertSecondaryAxisY ? -1.0:1.0);	
-	  poseMsg.angular.z = control->controlAxis.x*(invertSecondaryAxisX ? -1.0:1.0);  
-	  break;
-	}
-      }
+      priority_interface_overridden_ = false;
+      current_priority_interface_ = default_priority_interface_;
     }
-  }      
-  return;
+  }
+
+  // Continue only if current interface has priority
+  if (control->id_name.data == current_priority_interface_)
+  {
+    android_sensor_control_ = *control;
+    current_interface_type_ = TABLET_SENSOR;
+  }
 }
 
 /***********************************************************************************************************************
   * Body velocity data from auto navigation node
 ***********************************************************************************************************************/ 
-void autoNavigationCallback(const geometry_msgs::Twist &twist)
+void Remote::autoNavigationCallback(const geometry_msgs::Twist &twist)
 {
-  if (autoNavigationMode == AUTO_NAVIGATION_ON)
+  if (auto_navigation_mode_ == AUTO_NAVIGATION_ON)
   {
     //Coordination frame remapping between autoNav and SHC
-    bodyVelocityMsg.linear.x = twist.linear.x;
-    bodyVelocityMsg.linear.y = twist.linear.y;
-    bodyVelocityMsg.angular.z = twist.angular.z;
+    desired_velocity_msg_.linear.x = twist.linear.x;
+    desired_velocity_msg_.linear.y = twist.linear.y;
+    desired_velocity_msg_.angular.z = twist.angular.z;
   }
 }
 
@@ -862,153 +1102,56 @@ int main(int argc, char **argv)
 
   ros::NodeHandle n;
   
-  parameterAdjustmentMsg.data = 0.0;
-
-  //Get (or set defaults for) parameters defining joy array indices for buttons/axes
-  n.param("syropod_remote/primary_input_axis_x", primaryInputAxisX, 0);
-  n.param("syropod_remote/primary_input_axis_y", primaryInputAxisY, 1);
-  n.param("syropod_remote/primary_input_axis_z", primaryInputAxisZ, 2);
-  n.param("syropod_remote/secondary_input_axis_x", secondaryInputAxisX, 3);
-  n.param("syropod_remote/secondary_input_axis_y", secondaryInputAxisY, 4);
-  n.param("syropod_remote/secondary_input_axis_z", secondaryInputAxisZ, 5);
-  
-  n.param("syropod_remote/dpad_left_right", dPadLeftRight, 6);
-  n.param("syropod_remote/dpad_up_down", dPadUpDown, 7);     
-
-  n.param("syropod_remote/A_button", buttonA, 0);
-  n.param("syropod_remote/B_button", buttonB, 1);
-  n.param("syropod_remote/X_button", buttonX, 2);
-  n.param("syropod_remote/Y_button", buttonY, 3);
-  
-  n.param("syropod_remote/Left_button", bumperLeft, 4);
-  n.param("syropod_remote/Right_button", bumperRight, 5);
-  
-  n.param("syropod_remote/Back_button", backButton, 6);
-  n.param("syropod_remote/Start_button", startButton, 7);
-  n.param("syropod_remote/Logitech_button", logitechButton, 8);
-  
-  n.param("syropod_remote/Left_joy_button", joyButtonLeft, 9);
-  n.param("syropod_remote/Right_joy_button", joyButtonRight, 10);    
-
-  //Get (or set defaults for) parameters defining axes inversion
-  n.param("syropod_remote/primary_input_axis_x_flip", invertPrimaryAxisX, false);
-  n.param("syropod_remote/primary_input_axis_y_flip", invertPrimaryAxisY, false);
-  n.param("syropod_remote/primary_input_axis_z_flip", invertPrimaryAxisZ, false);
-  n.param("syropod_remote/secondary_input_axis_x_flip", invertSecondaryAxisX, false); 
-  n.param("syropod_remote/secondary_input_axis_y_flip", invertSecondaryAxisY, false);
-  n.param("syropod_remote/secondary_input_axis_z_flip", invertSecondaryAxisZ, false);
+  Parameters params;
+  Remote remote(n, &params);
   
   //Get (or set defaults for) parameters for other operating variables
-  n.param("syropod_remote/sensitivity", imuSensitivity, 10);
-  n.param("syropod_remote/pub_rate",publishRate, 50);
-  n.param("syropod_remote/compass_flip",invertCompass, true);
-  n.param("syropod_remote/imu_flip", invertImu, true);
-  n.param("syropod_remote/param_adjust_sensitivity", parameterAdjustmentSensitivity, 10);
-	
-	std::vector<std::string> leg_id_array;
-	if (!n.getParam("/syropod/parameters/leg_id", leg_id_array))
-	{
-		ROS_ERROR("Error reading parameter/s leg_id from rosparam. Check config file is loaded and type is correct\n");
-	}
-	else 
-	{
-		num_legs = leg_id_array.size();
-	}	
-	
-	if (!n.getParam("/syropod/parameters/syropod_type", syropod_type))
-	{
-		ROS_ERROR("Error reading parameter/s syropod_type from rosparam. Check config file is loaded and type is correct\n");
-		syropod_type = "Unknown";
-	}
+  params.imu_sensitivity.init(n, "imu_sensitivity");
+  params.publish_rate.init(n, "publish_rate");
+  params.invert_compass.init(n, "invert_compass");
+  params.invert_imu.init(n, "invert_imu");
+
+  Parameter<vector<string>> leg_id_array;
+  leg_id_array.init(n, "leg_id", "/syropod/parameters/");
+  remote.setLegCount(leg_id_array.data.size());
 
   //Setup publish loop_rate 
-  ros::Rate loopRate(publishRate);
-
-  //Subscribe to control topic/s
-  ros::Subscriber androidSensorSub = n.subscribe("android/sensor", 1, androidSensorCallback);
-  ros::Subscriber androidJoySub = n.subscribe("android/joy", 1, androidJoyCallback);
-  ros::Subscriber joypadSub = n.subscribe("joy", 1, joyCallback);
-  ros::Subscriber autoNavigationSub = n.subscribe("syropod_auto_navigation/desired_velocity", 1, autoNavigationCallback);
-  
-  //Setup publishers 
-  ros::Publisher bodyVelocityPublisher = n.advertise<geometry_msgs::Twist>("syropod_remote/desired_velocity",1);
-  ros::Publisher posePublisher = n.advertise<geometry_msgs::Twist>("syropod_remote/desired_pose",1);
-  ros::Publisher primaryTipVelocityPublisher = n.advertise<geometry_msgs::Point>("syropod_remote/primary_tip_velocity",1);
-  ros::Publisher secondaryTipVelocityPublisher = n.advertise<geometry_msgs::Point>("syropod_remote/secondary_tip_velocity",1);
-  
-  //Status publishers
-  ros::Publisher systemStatePublisher = n.advertise<std_msgs::Int8>("syropod_remote/system_state", 1);
-	ros::Publisher robotStatePublisher = n.advertise<std_msgs::Int8>("syropod_remote/robot_state", 1);
-  ros::Publisher gaitSelectionPublisher = n.advertise<std_msgs::Int8>("syropod_remote/gait_selection", 1);
-  ros::Publisher posingModePublisher = n.advertise<std_msgs::Int8>("syropod_remote/posing_mode", 1);
-  ros::Publisher cruiseControlPublisher = n.advertise<std_msgs::Int8>("syropod_remote/cruise_control_mode", 1);
-  ros::Publisher autoNavigationPublisher = n.advertise<std_msgs::Int8>("syropod_remote/auto_navigation_mode",1);  
-  ros::Publisher primaryLegSelectionPublisher = n.advertise<std_msgs::Int8>("syropod_remote/primary_leg_selection", 1);
-  ros::Publisher secondaryLegSelectionPublisher = n.advertise<std_msgs::Int8>("syropod_remote/secondary_leg_selection", 1);
-  ros::Publisher primaryLegStatePublisher = n.advertise<std_msgs::Int8>("syropod_remote/primary_leg_state", 1);
-  ros::Publisher secondaryLegStatePublisher = n.advertise<std_msgs::Int8>("syropod_remote/secondary_leg_state", 1);  
-  ros::Publisher parameterSelectionPublisher = n.advertise<std_msgs::Int8>("syropod_remote/parameter_selection", 1);
-  ros::Publisher parameterAdjustmentPublisher = n.advertise<std_msgs::Int8>("syropod_remote/parameter_adjustment", 1);  
-  ros::Publisher poseResetPublisher = n.advertise<std_msgs::Int8>("syropod_remote/pose_reset_mode", 1);
-	
-	//Init message values
-	bodyVelocityMsg.linear.x = 0.0;
-	bodyVelocityMsg.linear.y = 0.0;
-	bodyVelocityMsg.linear.z = 0.0;
-	bodyVelocityMsg.angular.x = 0.0;
-	bodyVelocityMsg.angular.y = 0.0;
-	bodyVelocityMsg.angular.z = 0.0;
-	poseMsg.linear.x = 0.0;
-	poseMsg.linear.y = 0.0;
-	poseMsg.linear.z = 0.0;	
-	poseMsg.angular.x = 0.0;
-	poseMsg.angular.y = 0.0;
-	poseMsg.angular.z = 0.0; 
-	primaryTipVelocityMsg.x = 0.0;
-	primaryTipVelocityMsg.y = 0.0;
-	primaryTipVelocityMsg.z = 0.0;
-	secondaryTipVelocityMsg.x = 0.0;
-	secondaryTipVelocityMsg.y = 0.0;
-	secondaryTipVelocityMsg.z = 0.0;
-
+  ros::Rate loopRate(params.publish_rate.data);
   while(ros::ok())
-  {      
-    //Assign message values
-    systemStateMsg.data = static_cast<int>(systemState);
-		robotStateMsg.data = static_cast<int>(robotState);
-    gaitSelectionMsg.data = static_cast<int>(gaitSelection);
-    posingModeMsg.data = static_cast<int>(posingMode);
-    cruiseControlModeMsg.data = static_cast<int>(cruiseControlMode);
-    autoNavigationModeMsg.data = static_cast<int>(autoNavigationMode);    
-    primaryLegSelectionMsg.data = static_cast<int>(primaryLegSelection);
-    secondaryLegSelectionMsg.data = static_cast<int>(secondaryLegSelection);
-    primaryLegStateMsg.data = static_cast<int>(primaryLegState);
-    secondaryLegStateMsg.data = static_cast<int>(secondaryLegState);    
-    parameterSelectionMsg.data = static_cast<int>(parameterSelection);    
-    poseResetModeMsg.data = static_cast<int>(poseResetMode);
+  {
+    // Check joypad inputs
+    remote.updateSystemState();
+    if (remote.getSystemState() == SUSPENDED)
+    {
+      remote.checkKonamiCode();
+    }
+    else
+    {
+      remote.resetKonamiCode();
+      remote.updateRobotState();
+      remote.updateGaitSelection();
+      remote.updateCruiseControlMode();
+      remote.updateAutoNavigationMode();
+      remote.updatePosingMode();
+      remote.updatePoseResetMode();
+      remote.updateParameterAdjustment();
+      remote.updatePrimaryLegSelection();
+      remote.updateSecondaryLegSelection();
+      remote.updatePrimaryLegState();
+      remote.updateSecondaryLegState();
+      remote.updateDesiredVelocity();
+      remote.updateDesiredPose();
+      remote.updatePrimaryTipVelocity();
+      remote.updateSecondaryTipVelocity();
+    }
     
-    //Publish messages   
-    systemStatePublisher.publish(systemStateMsg);
-		robotStatePublisher.publish(robotStateMsg);
-    bodyVelocityPublisher.publish(bodyVelocityMsg);	
-    posePublisher.publish(poseMsg);
-    primaryTipVelocityPublisher.publish(primaryTipVelocityMsg);
-    secondaryTipVelocityPublisher.publish(secondaryTipVelocityMsg);    
-      
-    gaitSelectionPublisher.publish(gaitSelectionMsg);
-    posingModePublisher.publish(posingModeMsg);
-    cruiseControlPublisher.publish(cruiseControlModeMsg);
-    autoNavigationPublisher.publish(autoNavigationModeMsg);    
-    primaryLegSelectionPublisher.publish(primaryLegSelectionMsg);
-    secondaryLegSelectionPublisher.publish(secondaryLegSelectionMsg);
-    primaryLegStatePublisher.publish(primaryLegStateMsg);
-    secondaryLegStatePublisher.publish(secondaryLegStateMsg);    
-    parameterSelectionPublisher.publish(parameterSelectionMsg);
-    parameterAdjustmentPublisher.publish(parameterAdjustmentMsg);    
-    poseResetPublisher.publish(poseResetModeMsg);
-	    
+    remote.publishMessages();
+    
     ros::spinOnce();
     loopRate.sleep();
   }
   return 0;
 }
+
+/***********************************************************************************************************************
+***********************************************************************************************************************/ 

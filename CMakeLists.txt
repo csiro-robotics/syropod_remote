@@ -8,9 +8,10 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   roslib
-  std_msgs
-  geometry_msgs
   message_generation
+  std_msgs
+  sensor_msgs
+  geometry_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -49,8 +50,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
  add_message_files(
    FILES
-   androidSensor.msg
-   androidJoy.msg
+   AndroidSensor.msg
+   AndroidJoy.msg
  )
 
 ## Generate services in the 'srv' folder
@@ -104,11 +105,12 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
+  INCLUDE_DIRS include
 #  LIBRARIES syropod_remote
-  CATKIN_DEPENDS roscpp rospy roslib std_msgs geometry_msgs message_runtime
+  CATKIN_DEPENDS roscpp rospy roslib message_runtime std_msgs sensor_msgs geometry_msgs 
 #  DEPENDS system_lib
 )
+add_definitions(-DDEBUG -std=c++11 -Wall -g -ggdb -O0 -fopenmp -fPIC)
 
 ###########
 ## Build ##
@@ -118,11 +120,12 @@ catkin_package(
 ## Your package locations should be listed before other locations
 # include_directories(include)
 include_directories(
+  include
   ${catkin_INCLUDE_DIRS}
 )
 
 add_executable(syropod_remote src/syropod_remote.cpp)
-target_link_libraries(syropod_remote ${catkin_LIBRARIES})
+target_link_libraries(syropod_remote ${catkin_LIBRARIES} -fopenmp)
 add_dependencies(syropod_remote syropod_remote_cpp syropod_remote_generate_messages_cpp)
 
 ## Declare a C++ library
