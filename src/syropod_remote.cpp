@@ -27,8 +27,9 @@ Remote::Remote(ros::NodeHandle n, Parameters* params)
   android_sensor_sub_ = n_.subscribe("android/sensor", 1, &Remote::androidSensorCallback, this);
   //android_joy_sub_ = n_.subscribe("android/joy", 1, &Remote::androidJoyCallback, this);
   joypad_sub_ = n_.subscribe("joy", 1, &Remote::joyCallback, this);
-  auto_navigation_sub_ = n_.subscribe("syropod_auto_navigation/desired_velocity", 1,
-                                            &Remote::autoNavigationCallback, this);
+  keyboard_sub_ = n_.subscribe("key", 1, &Remote::keyCallback, this);
+  auto_navigation_sub_ = n_.subscribe("syropod_auto_navigation/desired_velocity", 1, 
+                                      &Remote::autoNavigationCallback, this);
 
   //Setup publishers 
   desired_velocity_pub_ = n_.advertise<geometry_msgs::Twist>("syropod_remote/desired_velocity",1);
@@ -59,6 +60,7 @@ void Remote::updateSystemState(void)
 {
   switch (current_interface_type_)
   {
+    case (KEYBOARD):
     case (JOYPAD):
     {
       bool logitech_pressed = joypad_control_.buttons[JoypadButtonIndex::LOGITECH];
@@ -80,9 +82,6 @@ void Remote::updateSystemState(void)
     case (TABLET_SENSOR):
       //TODO
       break;
-    case (KEYBOARD):
-      //TODO
-      break;
     default:
       break;
   }
@@ -95,6 +94,7 @@ void Remote::checkKonamiCode(void)
 {
   switch (current_interface_type_)
   {
+    case (KEYBOARD):
     case (JOYPAD):
     {
       bool dPad_up_pressed = (joypad_control_.axes[JoypadAxisIndex::DPAD_UP_DOWN] == 1);
@@ -134,9 +134,6 @@ void Remote::checkKonamiCode(void)
     case (TABLET_SENSOR):
       //TODO
       break;
-    case (KEYBOARD):
-      //TODO
-      break;
     default:
       break;
   }
@@ -149,6 +146,7 @@ void Remote::updateRobotState(void)
 {
   switch (current_interface_type_)
   {
+    case (KEYBOARD):
     case (JOYPAD):
     {
       //On Start button press, iterate system state forward
@@ -184,9 +182,6 @@ void Remote::updateRobotState(void)
     case (TABLET_SENSOR):
       robot_state_ = static_cast<RobotState>(android_sensor_control_.robot_state.data);
       break;
-    case (KEYBOARD):
-      //TODO
-      break;
     default:
       break;
   }
@@ -199,6 +194,7 @@ void Remote::updateGaitSelection(void)
 {
   switch (current_interface_type_)
   {
+    case (KEYBOARD):
     case (JOYPAD):
     {
       //Cycle gaits on A button press
@@ -221,9 +217,6 @@ void Remote::updateGaitSelection(void)
     case (TABLET_SENSOR):
       //TODO
       break;
-    case (KEYBOARD):
-      //TODO
-      break;
     default:
       break;
   }
@@ -236,6 +229,7 @@ void Remote::updateCruiseControlMode(void)
 {
   switch (current_interface_type_)
   {
+    case (KEYBOARD):
     case (JOYPAD):
     {
       //Cycle cruise control mode on X button press
@@ -258,9 +252,6 @@ void Remote::updateCruiseControlMode(void)
     case (TABLET_SENSOR):
       //TODO
       break;
-    case (KEYBOARD):
-      //TODO
-      break;
     default:
       break;
   }
@@ -273,6 +264,7 @@ void Remote::updateAutoNavigationMode(void)
 {
   switch (current_interface_type_)
   {
+    case (KEYBOARD):
     case (JOYPAD):
     {
       //Cycle auto navigation mode on Y button press
@@ -298,9 +290,6 @@ void Remote::updateAutoNavigationMode(void)
     case (TABLET_SENSOR):
       //TODO
       break;
-    case (KEYBOARD):
-      //TODO
-      break;
     default:
       break;
   }
@@ -313,6 +302,7 @@ void Remote::updatePosingMode(void)
 {
   switch (current_interface_type_)
   {
+    case (KEYBOARD):
     case (JOYPAD):
     {
       //Cycle posing mode on B button press
@@ -339,9 +329,6 @@ void Remote::updatePosingMode(void)
     case (TABLET_SENSOR):
       posing_mode_ = static_cast<PosingMode>(android_sensor_control_.posing_mode.data);
       break;
-    case (KEYBOARD):
-      //TODO
-      break;
     default:
       break;
   }
@@ -354,6 +341,7 @@ void Remote::updatePoseResetMode(void)
 {
   switch (current_interface_type_)
   {
+    case (KEYBOARD):
     case (JOYPAD):
     {
       //On R3 button press, if no leg is currently selected, set pose reset mode depending on current posing mode instead
@@ -388,12 +376,6 @@ void Remote::updatePoseResetMode(void)
     case (TABLET_JOY):
       pose_reset_mode_ = static_cast<PoseResetMode>(android_joy_control_.pose_reset_mode.data);
       break;
-    case (TABLET_SENSOR):
-      //TODO
-      break;
-    case (KEYBOARD):
-      //TODO
-      break;
     default:
       break;
   }
@@ -406,6 +388,7 @@ void Remote::updateParameterAdjustment(void)
 {
   switch (current_interface_type_)
   {
+    case (KEYBOARD):
     case (JOYPAD):
     {
       //Message with 1.0 or -1.0 to increment/decrement parameter
@@ -433,12 +416,6 @@ void Remote::updateParameterAdjustment(void)
       parameter_selection_ = static_cast<ParameterSelection>(android_joy_control_.parameter_selection.data);
       parameter_adjustment_msg_.data = android_joy_control_.parameter_adjustment.data; //Should be 0.0, 1.0 or -1.0
       break;
-    case (TABLET_SENSOR):
-      //TODO
-      break;
-    case (KEYBOARD):
-      //TODO
-      break;
     default:
       break;
   }
@@ -453,6 +430,7 @@ void Remote::updatePrimaryLegSelection(void)
 {
   switch (current_interface_type_)
   {
+    case (KEYBOARD):
     case (JOYPAD):
     {
       //Cycle primary leg selection on R1 button press (skip slection if already allocated to secondary)
@@ -489,9 +467,6 @@ void Remote::updatePrimaryLegSelection(void)
     case (TABLET_SENSOR):
       //TODO
       break;
-    case (KEYBOARD):
-      //TODO
-      break;
     default:
       break;
   }
@@ -504,6 +479,7 @@ void Remote::updateSecondaryLegSelection(void)
 {
   switch (current_interface_type_)
   {
+    case (KEYBOARD):
     case (JOYPAD):
     {
       //Cycle secondary leg selection on L1 button press (skip slection if already allocated to primary)
@@ -542,9 +518,6 @@ void Remote::updateSecondaryLegSelection(void)
     case (TABLET_SENSOR):
       //TODO
       break;
-    case (KEYBOARD):
-      //TODO
-      break;
     default:
       break;
   }
@@ -557,6 +530,7 @@ void Remote::updatePrimaryLegState(void)
 {
   switch (current_interface_type_)
   {
+    case (KEYBOARD):
     case (JOYPAD):
     {
       //On L3 button press, cycle primary leg state of selected leg
@@ -588,9 +562,6 @@ void Remote::updatePrimaryLegState(void)
     case (TABLET_SENSOR):
       //TODO
       break;
-    case (KEYBOARD):
-      //TODO
-      break;
     default:
       break;
   }
@@ -603,6 +574,7 @@ void Remote::updateSecondaryLegState(void)
 {  
   switch (current_interface_type_)
   {
+    case (KEYBOARD):
     case (JOYPAD):
     {
       //On R3 button press, cycle primary leg state of selected leg
@@ -635,9 +607,6 @@ void Remote::updateSecondaryLegState(void)
     case (TABLET_SENSOR):
       //TODO
       break;
-    case (KEYBOARD):
-      //TODO
-      break;
     default:
       break;
   }
@@ -655,6 +624,7 @@ void Remote::updateDesiredVelocity(void)
     {
       switch (current_interface_type_)
       {
+        case (KEYBOARD):
         case (JOYPAD):
           desired_velocity_msg_.linear.x = joypad_control_.axes[PRIMARY_Y];
           desired_velocity_msg_.linear.y = joypad_control_.axes[PRIMARY_X];
@@ -676,9 +646,6 @@ void Remote::updateDesiredVelocity(void)
           }
           break;
         }
-        case (KEYBOARD):
-          //TODO
-          break;
         default:
           break;
       }
@@ -688,6 +655,7 @@ void Remote::updateDesiredVelocity(void)
     {
       switch (current_interface_type_)
       {
+        case (KEYBOARD):
         case (JOYPAD):
           desired_velocity_msg_.angular.z = joypad_control_.axes[SECONDARY_X];
           break;
@@ -727,9 +695,6 @@ void Remote::updateDesiredVelocity(void)
           desired_velocity_msg_.angular.z = rotate;
           break;
         }
-        case (KEYBOARD):
-          //TODO
-          break;
         default:
           break;
       }
@@ -751,6 +716,7 @@ void Remote::updateDesiredPose(void)
       {
         switch (current_interface_type_)
         {
+          case (KEYBOARD):
           case (JOYPAD):
             desired_pose_msg_.linear.x = joypad_control_.axes[SECONDARY_Y];
             desired_pose_msg_.linear.y = joypad_control_.axes[SECONDARY_X];
@@ -763,9 +729,6 @@ void Remote::updateDesiredPose(void)
             desired_pose_msg_.linear.x = android_sensor_control_.control_axis.y;
             desired_pose_msg_.linear.y = android_sensor_control_.control_axis.x;
             break;
-          case (KEYBOARD):
-            //TODO
-            break;
           default:
             break;
         }
@@ -775,6 +738,7 @@ void Remote::updateDesiredPose(void)
       {
         switch (current_interface_type_)
         {
+          case (KEYBOARD):
           case (JOYPAD):
             desired_pose_msg_.angular.x = -joypad_control_.axes[SECONDARY_X];
             desired_pose_msg_.angular.y = joypad_control_.axes[SECONDARY_Y];
@@ -787,9 +751,6 @@ void Remote::updateDesiredPose(void)
             desired_pose_msg_.angular.x = android_sensor_control_.control_axis.x;
             desired_pose_msg_.angular.y = android_sensor_control_.control_axis.y;
             break;
-          case (KEYBOARD):
-            //TODO
-            break;
           default:
             break;
         }
@@ -799,6 +760,7 @@ void Remote::updateDesiredPose(void)
       {
         switch (current_interface_type_)
         {
+          case (KEYBOARD):
           case (JOYPAD):
             desired_pose_msg_.linear.z = joypad_control_.axes[SECONDARY_Y];
             desired_pose_msg_.angular.z = joypad_control_.axes[SECONDARY_X];
@@ -810,9 +772,6 @@ void Remote::updateDesiredPose(void)
           case (TABLET_SENSOR):
             desired_pose_msg_.linear.z = android_sensor_control_.control_axis.y;
             desired_pose_msg_.angular.z = android_sensor_control_.control_axis.x;
-            break;
-          case (KEYBOARD):
-            //TODO
             break;
           default:
             break;
@@ -835,6 +794,13 @@ void Remote::updatePrimaryTipVelocity(void)
     //resetMessages();
     switch (current_interface_type_)
     {
+      case (KEYBOARD):
+      {
+        primary_tip_velocity_msg_.x = joypad_control_.axes[PRIMARY_Y];
+        primary_tip_velocity_msg_.y = joypad_control_.axes[PRIMARY_X];
+        primary_tip_velocity_msg_.z = joypad_control_.axes[PRIMARY_Z];
+        break;
+      }
       case (JOYPAD):
       {
         // Correct trigger
@@ -864,9 +830,6 @@ void Remote::updatePrimaryTipVelocity(void)
       case (TABLET_SENSOR):
         //TODO
         break;
-      case (KEYBOARD):
-        //TODO
-        break;
       default:
         break;
     }
@@ -883,6 +846,13 @@ void Remote::updateSecondaryTipVelocity(void)
     //resetMessages();
     switch (current_interface_type_)
     {
+      case (KEYBOARD):
+      {
+        secondary_tip_velocity_msg_.x = joypad_control_.axes[SECONDARY_Y];
+        secondary_tip_velocity_msg_.y = joypad_control_.axes[SECONDARY_X];
+        secondary_tip_velocity_msg_.z = joypad_control_.axes[SECONDARY_Z];
+        break;
+      }
       case (JOYPAD):
       {
         // Correct trigger
@@ -910,9 +880,6 @@ void Remote::updateSecondaryTipVelocity(void)
         break;
       }
       case (TABLET_SENSOR):
-        //TODO
-        break;
-      case (KEYBOARD):
         //TODO
         break;
       default:
@@ -1019,6 +986,17 @@ void Remote::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
   current_interface_type_ = JOYPAD;
   priority_interface_overridden_ = true;
   joypad_control_ = *joy;
+}
+
+/***********************************************************************************************************************
+  * Joy callback
+***********************************************************************************************************************/
+void Remote::keyCallback(const sensor_msgs::Joy::ConstPtr& key)
+{
+  current_priority_interface_ = "key";
+  current_interface_type_ = KEYBOARD;
+  priority_interface_overridden_ = true;
+  joypad_control_ = *key; //TODO Implement keyboard_control object (if needed)
 }
 
 /***********************************************************************************************************************

@@ -231,6 +231,7 @@ public:
   void publishMessages(void);
   
   void joyCallback(const sensor_msgs::Joy::ConstPtr& joy);
+  void keyCallback(const sensor_msgs::Joy::ConstPtr& key);
   void androidJoyCallback(syropod_remote::AndroidJoy::ConstPtr& control);
   void androidSensorCallback(const syropod_remote::AndroidSensor::ConstPtr& control);
   void autoNavigationCallback(const geometry_msgs::Twist &twist);
@@ -245,6 +246,7 @@ private:
   ros::Subscriber android_sensor_sub_;
   ros::Subscriber android_joy_sub_;
   ros::Subscriber joypad_sub_;
+  ros::Subscriber keyboard_sub_;
   ros::Subscriber auto_navigation_sub_;
   
   ros::Publisher desired_velocity_pub_;
