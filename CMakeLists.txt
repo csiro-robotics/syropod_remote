@@ -126,7 +126,7 @@ include_directories(
 
 add_executable(syropod_remote src/syropod_remote.cpp)
 target_link_libraries(syropod_remote ${catkin_LIBRARIES} -fopenmp)
-add_dependencies(syropod_remote syropod_remote_cpp syropod_remote_generate_messages_cpp)
+add_dependencies(syropod_remote syropod_remote_generate_messages_cpp)
 
 ## Declare a C++ library
 # add_library(syropod_remote
