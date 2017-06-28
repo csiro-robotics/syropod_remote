@@ -831,7 +831,7 @@ void Remote::updateTipVelocityModes(void)
   
   if (secondary_leg_state_ == MANUAL && current_interface_type_ == JOYPAD)
   {
-    bool right_bumper_pressed = joypad_control_.buttons[JoypadButtonIndex::LEFT_BUMPER];
+    bool right_bumper_pressed = joypad_control_.buttons[JoypadButtonIndex::RIGHT_BUMPER];
     if (right_bumper_pressed && debounce_right_bumper_)
     {
       int next_secondary_tip_velocity_input_mode = 

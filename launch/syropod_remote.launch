@@ -1,7 +1,7 @@
 <launch>
 
 <node pkg="joy" type="joy_node" name="joystick"/>
-<include file="$(find syropod_keyboard_control)/launch/syropod_keyboard_control.launch" />
+<!--include file="$(find syropod_keyboard_control)/launch/syropod_keyboard_control.launch" /-->
 
 
 <node pkg="syropod_remote" type="syropod_remote" name="syropod_remote" output="screen">
