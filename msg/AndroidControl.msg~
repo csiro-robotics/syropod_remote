@@ -1,6 +1,0 @@
-Header header
-geometry_msgs/Point orientation
-geometry_msgs/Point acceleration
-std_msgs/Bool start
-std_msgs/Int8 mode
-geometry_msgs/Point joy

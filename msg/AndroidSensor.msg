@@ -1,0 +1,8 @@
+Header header
+std_msgs/String id_name
+std_msgs/Bool override_priority_interface
+geometry_msgs/Point orientation
+std_msgs/Float64 relative_compass
+std_msgs/Int8 robot_state
+std_msgs/Int8 posing_mode
+geometry_msgs/Point control_axis

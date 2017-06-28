@@ -1,0 +1,19 @@
+Header header
+std_msgs/String id_name
+std_msgs/Bool override_priority_interface
+geometry_msgs/Point primary_control_axis
+geometry_msgs/Point secondary_control_axis
+std_msgs/Int8 system_state
+std_msgs/Int8 robot_state
+std_msgs/Int8 gait_selection
+std_msgs/Int8 cruise_control_mode
+std_msgs/Int8 auto_navigation_mode
+std_msgs/Int8 posing_mode
+std_msgs/Int8 pose_reset_mode
+std_msgs/Int8 primary_leg_selection
+std_msgs/Int8 secondary_leg_selection
+std_msgs/Int8 primary_leg_state
+std_msgs/Int8 secondary_leg_state
+std_msgs/Int8 parameter_selection
+std_msgs/Int8 parameter_adjustment
+
