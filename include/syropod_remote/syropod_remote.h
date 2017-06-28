@@ -42,6 +42,8 @@
 #define NUM_AUTO_NAVIGATION_MODES 2
 #define NUM_PARAMETER_SELECTIONS 9
 #define NUM_LEG_STATES 2
+#define NUM_TIP_VELOCITY_INPUT_MODES 2
+
 #define DEAD_ZONE 0.05
 
 enum JoypadButtonIndex
@@ -165,6 +167,12 @@ enum LegState
   MANUAL,
 };
 
+enum TipVelocityInputMode
+{
+  XY_MODE,
+  ZY_MODE,
+};
+
 using namespace std;
 
 
@@ -222,6 +230,7 @@ public:
   void updateSecondaryLegState(void);
   void updateDesiredVelocity(void);
   void updateDesiredPose(void);
+  void updateTipVelocityModes(void);
   void updatePrimaryTipVelocity(void);
   void updateSecondaryTipVelocity(void);
   
@@ -280,6 +289,8 @@ private:
   LegState primary_leg_state_ = WALKING;
   LegState secondary_leg_state_ = WALKING;
   ParameterSelection parameter_selection_ = NO_PARAMETER_SELECTION;
+  TipVelocityInputMode primary_tip_velocity_input_mode_ = XY_MODE;
+  TipVelocityInputMode secondary_tip_velocity_input_mode_ = XY_MODE;
   
   geometry_msgs::Twist desired_velocity_msg_;
   geometry_msgs::Twist desired_pose_msg_; 

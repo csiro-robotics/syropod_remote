@@ -66,8 +66,8 @@ void Remote::updateSystemState(void)
       bool logitech_pressed = joypad_control_.buttons[JoypadButtonIndex::LOGITECH];
       if (logitech_pressed && debounce_logitech_)
       {
-        int nextSystemState = (static_cast<int>(system_state_)+1)%NUM_SYSTEM_STATES;
-        system_state_ = static_cast<SystemState>(nextSystemState);
+        int next_system_state = (static_cast<int>(system_state_)+1)%NUM_SYSTEM_STATES;
+        system_state_ = static_cast<SystemState>(next_system_state);
         debounce_logitech_ = false;
       }
       else if (!logitech_pressed)
@@ -153,8 +153,8 @@ void Remote::updateRobotState(void)
       bool start_pressed = joypad_control_.buttons[START];
       if (start_pressed && debounce_start_) //Start button
       {
-        int nextRobotState = std::min((static_cast<int>(robot_state_)+1), NUM_ROBOT_STATES-1);
-        robot_state_ = static_cast<RobotState>(nextRobotState);
+        int next_robot_state = std::min((static_cast<int>(robot_state_)+1), NUM_ROBOT_STATES-1);
+        robot_state_ = static_cast<RobotState>(next_robot_state);
         debounce_start_ = false;
       }
       else if (!start_pressed)
@@ -166,8 +166,8 @@ void Remote::updateRobotState(void)
       bool back_pressed = joypad_control_.buttons[BACK];
       if (back_pressed && debounce_back_) //Back button
       {
-        int nextRobotState = std::max((static_cast<int>(robot_state_)-1), 0);
-        robot_state_ = static_cast<RobotState>(nextRobotState);
+        int next_robot_state = std::max((static_cast<int>(robot_state_)-1), 0);
+        robot_state_ = static_cast<RobotState>(next_robot_state);
         debounce_back_ = false;
       }	
       else if (!back_pressed)
@@ -201,8 +201,8 @@ void Remote::updateGaitSelection(void)
       bool a_pressed = joypad_control_.buttons[A_BUTTON];
       if (a_pressed && debounce_a_)
       {    
-        int nextGaitSelection = (static_cast<int>(gait_selection_)+1)%NUM_GAIT_SELECTIONS;
-        gait_selection_ = static_cast<GaitDesignation>(nextGaitSelection);
+        int next_gait_selection = (static_cast<int>(gait_selection_)+1)%NUM_GAIT_SELECTIONS;
+        gait_selection_ = static_cast<GaitDesignation>(next_gait_selection);
         debounce_a_ = false;
       }
       else if (!a_pressed)
@@ -236,8 +236,8 @@ void Remote::updateCruiseControlMode(void)
       bool x_pressed = joypad_control_.buttons[JoypadButtonIndex::X_BUTTON];
       if (x_pressed && debounce_x_)
       {
-        int nextCruiseControlMode = (static_cast<int>(cruise_control_mode_)+1)%NUM_CRUISE_CONTROL_MODES;
-        cruise_control_mode_ = static_cast<CruiseControlMode>(nextCruiseControlMode);
+        int next_cruise_control_mode = (static_cast<int>(cruise_control_mode_)+1)%NUM_CRUISE_CONTROL_MODES;
+        cruise_control_mode_ = static_cast<CruiseControlMode>(next_cruise_control_mode);
         debounce_x_ = false;
       }
       else if (!x_pressed)
@@ -271,8 +271,8 @@ void Remote::updateAutoNavigationMode(void)
       bool y_pressed = joypad_control_.buttons[JoypadButtonIndex::Y_BUTTON];
       if (y_pressed && debounce_y_)
       {    
-        int nextAutoNavigationMode = (static_cast<int>(auto_navigation_mode_)+1)%NUM_AUTO_NAVIGATION_MODES;
-        auto_navigation_mode_ = static_cast<AutoNavigationMode>(nextAutoNavigationMode);
+        int next_auto_navigation_mode = (static_cast<int>(auto_navigation_mode_)+1)%NUM_AUTO_NAVIGATION_MODES;
+        auto_navigation_mode_ = static_cast<AutoNavigationMode>(next_auto_navigation_mode);
         debounce_y_ = false;
         desired_velocity_msg_.linear.x = 0.0;
         desired_velocity_msg_.linear.y = 0.0;
@@ -309,8 +309,8 @@ void Remote::updatePosingMode(void)
       bool b_pressed = joypad_control_.buttons[B_BUTTON];
       if (b_pressed && debounce_b_)
       {
-        int nextPosingMode = (static_cast<int>(posing_mode_)+1)%NUM_POSING_MODES;
-        posing_mode_ = static_cast<PosingMode>(nextPosingMode);
+        int next_posing_mode = (static_cast<int>(posing_mode_)+1)%NUM_POSING_MODES;
+        posing_mode_ = static_cast<PosingMode>(next_posing_mode);
         if (secondary_leg_state_ != MANUAL)
         {
           secondary_leg_selection_ = LEG_UNDESIGNATED;
@@ -398,12 +398,12 @@ void Remote::updateParameterAdjustment(void)
       int dpad_left_right = joypad_control_.axes[JoypadAxisIndex::DPAD_LEFT_RIGHT];
       if (dpad_left_right && debounce_dpad_)
       {
-        int nextParameterSelection = (static_cast<int>(parameter_selection_)-dpad_left_right)%NUM_PARAMETER_SELECTIONS;
-        if (nextParameterSelection < 0)
+        int next_parameter_selection = (static_cast<int>(parameter_selection_)-dpad_left_right)%NUM_PARAMETER_SELECTIONS;
+        if (next_parameter_selection < 0)
         {
-          nextParameterSelection += NUM_PARAMETER_SELECTIONS;
+          next_parameter_selection += NUM_PARAMETER_SELECTIONS;
         }
-        parameter_selection_ = static_cast<ParameterSelection>(nextParameterSelection);
+        parameter_selection_ = static_cast<ParameterSelection>(next_parameter_selection);
         debounce_dpad_ = false;
       }
       else if (!dpad_left_right)
@@ -434,19 +434,19 @@ void Remote::updatePrimaryLegSelection(void)
     case (JOYPAD):
     {
       //Cycle primary leg selection on R1 button press (skip slection if already allocated to secondary)
-      bool left_bumped_pressed = joypad_control_.buttons[JoypadButtonIndex::LEFT_BUMPER];
+      bool left_bumper_pressed = joypad_control_.buttons[JoypadButtonIndex::LEFT_BUMPER];
       if (primary_leg_state_ == WALKING)
       {
-        if (left_bumped_pressed && debounce_left_bumper_)
+        if (left_bumper_pressed && debounce_left_bumper_)
         {
-          int nextPrimaryLegSelection = (static_cast<int>(primary_leg_selection_)+1)%(leg_count_ +1);
-          if (nextPrimaryLegSelection == static_cast<int>(secondary_leg_selection_) && secondary_leg_state_ == MANUAL)
+          int next_primary_leg_selection = (static_cast<int>(primary_leg_selection_)+1)%(leg_count_ +1);
+          if (next_primary_leg_selection == static_cast<int>(secondary_leg_selection_) && secondary_leg_state_ == MANUAL)
           {
-            nextPrimaryLegSelection = (static_cast<int>(secondary_leg_selection_)+1)%(leg_count_ +1);
+            next_primary_leg_selection = (static_cast<int>(secondary_leg_selection_)+1)%(leg_count_ +1);
           }
-          if (nextPrimaryLegSelection < leg_count_)
+          if (next_primary_leg_selection < leg_count_)
           {
-            primary_leg_selection_ = static_cast<LegSelection>(nextPrimaryLegSelection);
+            primary_leg_selection_ = static_cast<LegSelection>(next_primary_leg_selection);
           }
           else
           {
@@ -454,7 +454,7 @@ void Remote::updatePrimaryLegSelection(void)
           }
           debounce_left_bumper_ = false;
         }
-        else if (!left_bumped_pressed)
+        else if (!left_bumper_pressed)
         {
           debounce_left_bumper_ = true;
         }
@@ -483,20 +483,20 @@ void Remote::updateSecondaryLegSelection(void)
     case (JOYPAD):
     {
       //Cycle secondary leg selection on L1 button press (skip slection if already allocated to primary)
-      bool right_bumped_pressed = joypad_control_.buttons[JoypadButtonIndex::RIGHT_BUMPER];
+      bool right_bumper_pressed = joypad_control_.buttons[JoypadButtonIndex::RIGHT_BUMPER];
       if (secondary_leg_state_ == WALKING)
       {
-        if (right_bumped_pressed && debounce_right_bumper_)
+        if (right_bumper_pressed && debounce_right_bumper_)
         {
-          int nextSecondaryLegSelection = (static_cast<int>(secondary_leg_selection_)+1)%(leg_count_ +1);
-          if (nextSecondaryLegSelection == static_cast<int>(primary_leg_selection_) && primary_leg_state_ == MANUAL)
+          int next_secondary_leg_selection = (static_cast<int>(secondary_leg_selection_)+1)%(leg_count_ +1);
+          if (next_secondary_leg_selection == static_cast<int>(primary_leg_selection_) && primary_leg_state_ == MANUAL)
           {
-            nextSecondaryLegSelection = (static_cast<int>(primary_leg_selection_)+1)%(leg_count_ +1);
+            next_secondary_leg_selection = (static_cast<int>(primary_leg_selection_)+1)%(leg_count_ +1);
           }
           
-          if (nextSecondaryLegSelection < leg_count_)
+          if (next_secondary_leg_selection < leg_count_)
           {
-            secondary_leg_selection_ = static_cast<LegSelection>(nextSecondaryLegSelection);
+            secondary_leg_selection_ = static_cast<LegSelection>(next_secondary_leg_selection);
           }
           else
           {
@@ -505,7 +505,7 @@ void Remote::updateSecondaryLegSelection(void)
           
           debounce_right_bumper_ = false;
         }
-        else if (!right_bumped_pressed)
+        else if (!right_bumper_pressed)
         {
           debounce_right_bumper_ = true;
         }
@@ -539,8 +539,8 @@ void Remote::updatePrimaryLegState(void)
       {
         if (left_joystick_pressed && debounce_left_joystick_)
         {
-          int nextPrimaryLegState = (static_cast<int>(primary_leg_state_)+1)%NUM_LEG_STATES;
-          primary_leg_state_ = static_cast<LegState>(nextPrimaryLegState);
+          int next_primary_leg_state = (static_cast<int>(primary_leg_state_)+1)%NUM_LEG_STATES;
+          primary_leg_state_ = static_cast<LegState>(next_primary_leg_state);
           //If 2nd leg selection same as 1st whilst 1st is toggling state, then iterate 2nd leg selection
           if (secondary_leg_selection_ == primary_leg_selection_) 
           {
@@ -583,8 +583,8 @@ void Remote::updateSecondaryLegState(void)
       {
         if (right_joystick_pressed && debounce_right_joystick_)
         {
-          int nextSecondaryLegState = (static_cast<int>(secondary_leg_state_)+1)%NUM_LEG_STATES;
-          secondary_leg_state_ = static_cast<LegState>(nextSecondaryLegState);
+          int next_secondary_leg_state = (static_cast<int>(secondary_leg_state_)+1)%NUM_LEG_STATES;
+          secondary_leg_state_ = static_cast<LegState>(next_secondary_leg_state);
           //If 1st leg selection same as 2nd whilst 2ndst is toggling state, then iterate 1st leg selection
           if (secondary_leg_selection_ == primary_leg_selection_) 
           {
@@ -619,7 +619,6 @@ void Remote::updateDesiredVelocity(void)
 {
   if (auto_navigation_mode_ == AUTO_NAVIGATION_OFF)
   {
-    //resetMessages();
     if (primary_leg_state_ == WALKING)
     {
       switch (current_interface_type_)
@@ -651,14 +650,40 @@ void Remote::updateDesiredVelocity(void)
       }
     }
     
-    if (secondary_leg_state_ == WALKING && posing_mode_ == NO_POSING)
+    if (secondary_leg_state_ == WALKING)
     {
       switch (current_interface_type_)
       {
         case (KEYBOARD):
-        case (JOYPAD):
-          desired_velocity_msg_.angular.z = joypad_control_.axes[SECONDARY_X];
+          desired_velocity_msg_.angular.z = joypad_control_.axes[PRIMARY_Z];
           break;
+        case (JOYPAD):
+        {
+          double corrected_primary_axis_z;
+          if (joypad_control_.axes[PRIMARY_Z] == 0.0 && primary_z_axis_corrected_)
+          {
+            corrected_primary_axis_z = 0.0;
+          }
+          else
+          {
+            corrected_primary_axis_z = -(joypad_control_.axes[PRIMARY_Z] - 1.0) / 2.0;
+            primary_z_axis_corrected_ = false;
+          }
+
+          double corrected_secondary_axis_z;
+          if (joypad_control_.axes[SECONDARY_Z] == 0.0 && secondary_z_axis_corrected_)
+          {
+            corrected_secondary_axis_z = 0.0;
+          }
+          else
+          {
+            corrected_secondary_axis_z = -(joypad_control_.axes[SECONDARY_Z] - 1.0) / 2.0;
+            secondary_z_axis_corrected_ = false;
+          }
+
+          desired_velocity_msg_.angular.z = corrected_primary_axis_z - corrected_secondary_axis_z;
+          break;
+        }
         case (TABLET_JOY):
           desired_velocity_msg_.angular.z = -android_joy_control_.secondary_control_axis.x;
           break;
@@ -709,7 +734,6 @@ void Remote::updateDesiredPose(void)
 {
   if (auto_navigation_mode_ == AUTO_NAVIGATION_OFF && secondary_leg_state_ == WALKING)
   {
-    //resetMessages();
     switch (posing_mode_)
     {
       case (X_Y_POSING):
@@ -785,6 +809,44 @@ void Remote::updateDesiredPose(void)
 }
 
 /***********************************************************************************************************************
+  * Tip Velocity Input Modes
+***********************************************************************************************************************/
+void Remote::updateTipVelocityModes(void)
+{
+  if (primary_leg_state_ == MANUAL && current_interface_type_ == JOYPAD)
+  {
+    bool left_bumper_pressed = joypad_control_.buttons[JoypadButtonIndex::LEFT_BUMPER];
+    if (left_bumper_pressed && debounce_left_bumper_)
+    {
+      int next_primary_tip_velocity_input_mode = 
+        (static_cast<int>(primary_tip_velocity_input_mode_)+1)%NUM_TIP_VELOCITY_INPUT_MODES;
+      primary_tip_velocity_input_mode_ = static_cast<TipVelocityInputMode>(next_primary_tip_velocity_input_mode);
+      debounce_left_bumper_ = false;
+    }
+    else if (!left_bumper_pressed)
+    {
+      debounce_left_bumper_ = true;
+    }
+  }
+  
+  if (secondary_leg_state_ == MANUAL && current_interface_type_ == JOYPAD)
+  {
+    bool right_bumper_pressed = joypad_control_.buttons[JoypadButtonIndex::LEFT_BUMPER];
+    if (right_bumper_pressed && debounce_right_bumper_)
+    {
+      int next_secondary_tip_velocity_input_mode = 
+        (static_cast<int>(secondary_tip_velocity_input_mode_)+1)%NUM_TIP_VELOCITY_INPUT_MODES;
+      secondary_tip_velocity_input_mode_ = static_cast<TipVelocityInputMode>(next_secondary_tip_velocity_input_mode);
+      debounce_right_bumper_ = false;
+    }
+    else if (!right_bumper_pressed)
+    {
+      debounce_right_bumper_ = true;
+    }
+  }
+}
+
+/***********************************************************************************************************************
   * Primary Tip Velocity
 ***********************************************************************************************************************/
 void Remote::updatePrimaryTipVelocity(void)
@@ -803,21 +865,16 @@ void Remote::updatePrimaryTipVelocity(void)
       }
       case (JOYPAD):
       {
-        // Correct trigger
-        double corrected_primary_axis_z;
-        double axis_inverter = (joypad_control_.buttons[LEFT_BUMPER] ? -1.0 : 1.0);
-        if (joypad_control_.axes[PRIMARY_Z] == 0.0 && primary_z_axis_corrected_)
+        if (primary_tip_velocity_input_mode_ == XY_MODE)
         {
-          corrected_primary_axis_z = 0.0;
+          primary_tip_velocity_msg_.x = joypad_control_.axes[PRIMARY_Y];
+          primary_tip_velocity_msg_.y = joypad_control_.axes[PRIMARY_X];
         }
-        else
+        else if (primary_tip_velocity_input_mode_ == ZY_MODE)
         {
-          corrected_primary_axis_z = -(joypad_control_.axes[PRIMARY_Z] - 1.0) / 2.0;
-          primary_z_axis_corrected_ = false;
+          primary_tip_velocity_msg_.z = joypad_control_.axes[PRIMARY_Y];
+          primary_tip_velocity_msg_.y = joypad_control_.axes[PRIMARY_X];
         }
-        primary_tip_velocity_msg_.x = joypad_control_.axes[PRIMARY_Y];
-        primary_tip_velocity_msg_.y = joypad_control_.axes[PRIMARY_X];
-        primary_tip_velocity_msg_.z = corrected_primary_axis_z * axis_inverter;
         break;
       }
       case (TABLET_JOY):
@@ -855,21 +912,16 @@ void Remote::updateSecondaryTipVelocity(void)
       }
       case (JOYPAD):
       {
-        // Correct trigger
-        double corrected_secondary_axis_z;
-        double axis_inverter = (joypad_control_.buttons[RIGHT_BUMPER] ? -1.0 : 1.0);
-        if (joypad_control_.axes[SECONDARY_Z] == 0.0 && secondary_z_axis_corrected_)
+        if (secondary_tip_velocity_input_mode_ == XY_MODE)
         {
-          corrected_secondary_axis_z = 0.0;
+          secondary_tip_velocity_msg_.x = joypad_control_.axes[SECONDARY_Y];
+          secondary_tip_velocity_msg_.y = joypad_control_.axes[SECONDARY_X];
         }
-        else
+        else if (secondary_tip_velocity_input_mode_ == ZY_MODE)
         {
-          corrected_secondary_axis_z = -(joypad_control_.axes[SECONDARY_Z] - 1.0) / 2.0;
-          secondary_z_axis_corrected_ = false;
+          secondary_tip_velocity_msg_.z = joypad_control_.axes[SECONDARY_Y];
+          secondary_tip_velocity_msg_.y = joypad_control_.axes[SECONDARY_X];
         }
-        secondary_tip_velocity_msg_.x = joypad_control_.axes[SECONDARY_Y];
-        secondary_tip_velocity_msg_.y = joypad_control_.axes[SECONDARY_X];
-        secondary_tip_velocity_msg_.z = corrected_secondary_axis_z * axis_inverter;
         break;
       }
       case (TABLET_JOY):
@@ -1119,6 +1171,7 @@ int main(int argc, char **argv)
       remote.updateSecondaryLegState();
       remote.updateDesiredVelocity();
       remote.updateDesiredPose();
+      remote.updateTipVelocityModes();
       remote.updatePrimaryTipVelocity();
       remote.updateSecondaryTipVelocity();
     }

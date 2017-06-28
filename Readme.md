@@ -29,10 +29,12 @@ Control scheme for Logitech F710 wireless gamepad:
 
 * Left Bumper:
     * Leg Selection Mode: Cycles through possible leg selections for primary leg manipulation.
-    * Leg Manipulation Mode: Whilst in leg manipulation, inverts z-axis tip velocity input for primary selected leg.
+    * Leg Manipulation Mode: Whilst in leg manipulation, cycles between tip velocity input mode or secondary selected leg.
+                             (i.e. Manipulation in X/Y or Z/Y planes)
 * Right Bumper:
     * Leg Selection Mode: Cycles through possible leg selections for secondary leg manipulation.
-    * Leg Manipulation Mode: Whilst in leg manipulation, inverts z-axis tip velocity input for secondary selected leg.
+    * Leg Manipulation Mode: Whilst in leg manipulation, cycles between tip velocity input mode or secondary selected leg.
+                             (i.e. Manipulation in X/Y or Z/Y planes)
 
 * Left Joystick Button: 
     * UNASSIGNED: If no leg is selected for primary manipulation - perform unassigned action.
@@ -49,8 +51,8 @@ Control scheme for Logitech F710 wireless gamepad:
 
 ### Triggers:
 
-* Left Trigger: Controls z-axis velocity input for primary leg manipulation (inverted by Left Bumper).
-* Right Trigger: Controls z-axis velocity input for secondary leg manipulation (inverted by Right Bumper).
+* Left Trigger: Commands desired angular body velocity in the positive direction (i.e. robot turn left)
+* Right Trigger: Commands desired angular body velocity in the negative direction (i.e. robot turn right)
 
 ### Joysticks:
 
@@ -63,9 +65,7 @@ Control scheme for Logitech F710 wireless gamepad:
         * Left/Right: Positive/negative velocity input in the y-axis of the robot frame. (i.e. tip left/right)
 
 * Right Joystick:
-    * Angular Body Velocity Input Mode: Commands desired angular body velocity.
-        * Up/Down: UNASSIGNED
-        * Left/Right: Positive/negative angular velocity input about the z-axis of the robot frame. (i.e. robot turn left/right)
+    * No Posing Mode: Delivers no posing input.
     * X/Y Posing Mode: If the current POSING_MODE is X_Y_POSING - commands desired linear posing velocity in the x/y axes.
         * Up/Down: Positive/Negative velocity input in the x-axis of the robot frame. (i.e. pose robot body forward/backward)
         * Left/Right: Positive/Negative velocity input in the y-axis of the robot frame. (i.e. pose robot body left/right)
@@ -177,6 +177,10 @@ Note: Version control commenced at v0.5.0. No changes were logged before this ve
 
 - v0.5.0
     - Renamed from hexapod_remote to syropod_remote inline with release of SHC v0.5.0.
+    - Refactored into command specific functions
+    - Added support for keyboard control
+    - Modified control scheme for leg manipulation plane selection
+    - Modified control scheme for to make joypad triggers control body angular velocity
 
 ------------------------------------------------------------------------------------------------------------------------
 
