@@ -655,11 +655,11 @@ void Remote::updateDesiredVelocity(void)
     {
       case (KEYBOARD):
       {
-        if (secondary_leg_state_ != MANUAL)
+        if (primary_leg_state_ == WALKING)
         {
           desired_velocity_msg_.angular.z = joypad_control_.axes[PRIMARY_Z];
-          break;
         }
+        break;
       }
       case (JOYPAD):
       {
