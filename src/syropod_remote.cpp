@@ -650,79 +650,82 @@ void Remote::updateDesiredVelocity(void)
       }
     }
     
-    if (secondary_leg_state_ == WALKING)
+    
+    switch (current_interface_type_)
     {
-      switch (current_interface_type_)
+      case (KEYBOARD):
       {
-        case (KEYBOARD):
+        if (secondary_leg_state_ != MANUAL)
+        {
           desired_velocity_msg_.angular.z = joypad_control_.axes[PRIMARY_Z];
           break;
-        case (JOYPAD):
-        {
-          double corrected_primary_axis_z;
-          if (joypad_control_.axes[PRIMARY_Z] == 0.0 && primary_z_axis_corrected_)
-          {
-            corrected_primary_axis_z = 0.0;
-          }
-          else
-          {
-            corrected_primary_axis_z = -(joypad_control_.axes[PRIMARY_Z] - 1.0) / 2.0;
-            primary_z_axis_corrected_ = false;
-          }
-
-          double corrected_secondary_axis_z;
-          if (joypad_control_.axes[SECONDARY_Z] == 0.0 && secondary_z_axis_corrected_)
-          {
-            corrected_secondary_axis_z = 0.0;
-          }
-          else
-          {
-            corrected_secondary_axis_z = -(joypad_control_.axes[SECONDARY_Z] - 1.0) / 2.0;
-            secondary_z_axis_corrected_ = false;
-          }
-
-          desired_velocity_msg_.angular.z = corrected_primary_axis_z - corrected_secondary_axis_z;
-          break;
         }
-        case (TABLET_JOY):
-          desired_velocity_msg_.angular.z = -android_joy_control_.secondary_control_axis.x;
-          break;
-        case (TABLET_SENSOR): //TODO Refactor
-        {
-          //Logic regarding deciding syropod's moving(Walk Foward/Backward & Strafe Left/Right)
-          double sensitivity = params_->imu_sensitivity.data;
-          double orientation_x = 0 + round(android_sensor_control_.orientation.x/90.0 * sensitivity)/sensitivity;
-          double orientation_y = 0 + round(android_sensor_control_.orientation.y/90.0 * sensitivity)/sensitivity;
-          //Zero values exceeding limit
-          if (abs(orientation_y) > 1.0)
-          {
-            orientation_y = 0;
-          }
-
-          //Logic regarding deciding syropod's rotation 
-          double compass_inverter = (params_->invert_compass.data ? -1.0 : 1.0);
-          double relative_compass = android_sensor_control_.relative_compass.data * compass_inverter;
-
-          //Rotate as required
-          double rotate;
-          if (relative_compass > 0.3 && (abs(orientation_x) + abs(orientation_y) < 0.3))
-          {
-            rotate = ROTATE_COUNTERCLOCKWISE;
-          }
-          else if (relative_compass < -0.3 && (abs(orientation_x) + abs(orientation_y) < 0.3)) 
-          {
-            rotate = ROTATE_CLOCKWISE;
-          }
-          else
-          {
-            rotate = NO_ROTATION;
-          }
-          desired_velocity_msg_.angular.z = rotate;
-          break;
-        }
-        default:
-          break;
       }
+      case (JOYPAD):
+      {
+        double corrected_primary_axis_z;
+        if (joypad_control_.axes[PRIMARY_Z] == 0.0 && primary_z_axis_corrected_)
+        {
+          corrected_primary_axis_z = 0.0;
+        }
+        else
+        {
+          corrected_primary_axis_z = -(joypad_control_.axes[PRIMARY_Z] - 1.0) / 2.0;
+          primary_z_axis_corrected_ = false;
+        }
+
+        double corrected_secondary_axis_z;
+        if (joypad_control_.axes[SECONDARY_Z] == 0.0 && secondary_z_axis_corrected_)
+        {
+          corrected_secondary_axis_z = 0.0;
+        }
+        else
+        {
+          corrected_secondary_axis_z = -(joypad_control_.axes[SECONDARY_Z] - 1.0) / 2.0;
+          secondary_z_axis_corrected_ = false;
+        }
+
+        desired_velocity_msg_.angular.z = corrected_primary_axis_z - corrected_secondary_axis_z;
+        break;
+      }
+      case (TABLET_JOY):
+        desired_velocity_msg_.angular.z = -android_joy_control_.secondary_control_axis.x;
+        break;
+      case (TABLET_SENSOR): //TODO Refactor
+      {
+        //Logic regarding deciding syropod's moving(Walk Foward/Backward & Strafe Left/Right)
+        double sensitivity = params_->imu_sensitivity.data;
+        double orientation_x = 0 + round(android_sensor_control_.orientation.x/90.0 * sensitivity)/sensitivity;
+        double orientation_y = 0 + round(android_sensor_control_.orientation.y/90.0 * sensitivity)/sensitivity;
+        //Zero values exceeding limit
+        if (abs(orientation_y) > 1.0)
+        {
+          orientation_y = 0;
+        }
+
+        //Logic regarding deciding syropod's rotation 
+        double compass_inverter = (params_->invert_compass.data ? -1.0 : 1.0);
+        double relative_compass = android_sensor_control_.relative_compass.data * compass_inverter;
+
+        //Rotate as required
+        double rotate;
+        if (relative_compass > 0.3 && (abs(orientation_x) + abs(orientation_y) < 0.3))
+        {
+          rotate = ROTATE_COUNTERCLOCKWISE;
+        }
+        else if (relative_compass < -0.3 && (abs(orientation_x) + abs(orientation_y) < 0.3)) 
+        {
+          rotate = ROTATE_CLOCKWISE;
+        }
+        else
+        {
+          rotate = NO_ROTATION;
+        }
+        desired_velocity_msg_.angular.z = rotate;
+        break;
+      }
+      default:
+        break;
     }
   }
 }
