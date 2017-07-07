@@ -1152,6 +1152,8 @@ int main(int argc, char **argv)
   ros::Rate loopRate(params.publish_rate.data);
   while(ros::ok())
   {
+    remote.resetMessages();
+    
     // Check joypad inputs
     remote.updateSystemState();
     if (remote.getSystemState() == SUSPENDED)
