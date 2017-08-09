@@ -25,7 +25,7 @@ Remote::Remote(ros::NodeHandle n, Parameters* params)
 {
   //Subscribe to control topic/s
   android_sensor_sub_ = n_.subscribe("android/sensor", 1, &Remote::androidSensorCallback, this);
-  //android_joy_sub_ = n_.subscribe("android/joy", 1, &Remote::androidJoyCallback, this);
+  android_joy_sub_ = n_.subscribe("android/joy", 1, &Remote::androidJoyCallback, this);
   joypad_sub_ = n_.subscribe("joy", 1, &Remote::joyCallback, this);
   keyboard_sub_ = n_.subscribe("key", 1, &Remote::keyCallback, this);
   auto_navigation_sub_ = n_.subscribe("syropod_auto_navigation/desired_velocity", 1, 
@@ -619,6 +619,7 @@ void Remote::updateDesiredVelocity(void)
 {
   if (auto_navigation_mode_ == AUTO_NAVIGATION_OFF)
   {
+    // Linear Velocity
     if (primary_leg_state_ == WALKING)
     {
       switch (current_interface_type_)
@@ -649,8 +650,8 @@ void Remote::updateDesiredVelocity(void)
           break;
       }
     }
-    
-    
+
+    // Angular velocity
     switch (current_interface_type_)
     {
       case (KEYBOARD):
@@ -663,6 +664,12 @@ void Remote::updateDesiredVelocity(void)
       }
       case (JOYPAD):
       {
+        // Right Joystick control
+        if (posing_mode_ == NO_POSING)
+        {
+          desired_velocity_msg_.angular.z = joypad_control_.axes[SECONDARY_X];
+        }
+        /* Trigger control
         double corrected_primary_axis_z;
         if (joypad_control_.axes[PRIMARY_Z] == 0.0 && primary_z_axis_corrected_)
         {
@@ -686,6 +693,7 @@ void Remote::updateDesiredVelocity(void)
         }
 
         desired_velocity_msg_.angular.z = corrected_primary_axis_z - corrected_secondary_axis_z;
+        */
         break;
       }
       case (TABLET_JOY):
@@ -1057,7 +1065,7 @@ void Remote::keyCallback(const sensor_msgs::Joy::ConstPtr& key)
 /***********************************************************************************************************************
   * Callback for android virtual joypad control of syropod
 ***********************************************************************************************************************/ 
-void Remote::androidJoyCallback(syropod_remote::AndroidJoy::ConstPtr& control)
+void Remote::androidJoyCallback(const syropod_remote::AndroidJoy::ConstPtr& control)
 {
   // Control turning off/on overiding default interface with this interface
   if (control->override_priority_interface.data && !priority_interface_overridden_)

@@ -11,7 +11,4 @@
     <param name="invert_imu" value="true"/>
 </node>
 
-<!-- Rosbridge server --> 
-<!--include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" /-->
-
 </launch>

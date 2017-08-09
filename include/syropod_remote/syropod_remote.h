@@ -241,7 +241,7 @@ public:
   
   void joyCallback(const sensor_msgs::Joy::ConstPtr& joy);
   void keyCallback(const sensor_msgs::Joy::ConstPtr& key);
-  void androidJoyCallback(syropod_remote::AndroidJoy::ConstPtr& control);
+  void androidJoyCallback(const syropod_remote::AndroidJoy::ConstPtr& control);
   void androidSensorCallback(const syropod_remote::AndroidSensor::ConstPtr& control);
   void autoNavigationCallback(const geometry_msgs::Twist &twist);
 
