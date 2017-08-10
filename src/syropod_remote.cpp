@@ -779,7 +779,7 @@ void Remote::updateDesiredPose(void)
             desired_pose_msg_.angular.y = joypad_control_.axes[SECONDARY_Y];
             break;
           case (TABLET_JOY):
-            desired_pose_msg_.angular.x = android_joy_control_.secondary_control_axis.x;
+            desired_pose_msg_.angular.x = -android_joy_control_.secondary_control_axis.x;
             desired_pose_msg_.angular.y = android_joy_control_.secondary_control_axis.y;
             break;
           case (TABLET_SENSOR):
