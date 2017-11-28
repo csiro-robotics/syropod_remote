@@ -44,6 +44,7 @@ Remote::Remote(ros::NodeHandle n, Parameters* params)
   posing_mode_pub_ = n_.advertise<std_msgs::Int8>("syropod_remote/posing_mode", 1);
   cruise_control_pub_ = n_.advertise<std_msgs::Int8>("syropod_remote/cruise_control_mode", 1);
   auto_navigation_pub_ = n_.advertise<std_msgs::Int8>("syropod_remote/auto_navigation_mode",1);
+  planner_mode_pub_ = n_.advertise<std_msgs::Int8>("syropod_remote/planner_mode", 1);
   primary_leg_selection_pub_ = n_.advertise<std_msgs::Int8>("syropod_remote/primary_leg_selection", 1);
   secondary_leg_selection_pub_ = n_.advertise<std_msgs::Int8>("syropod_remote/secondary_leg_selection", 1);
   primary_leg_state_pub_ = n_.advertise<std_msgs::Int8>("syropod_remote/primary_leg_state", 1);
@@ -255,12 +256,17 @@ void Remote::updateCruiseControlMode(void)
     default:
       break;
   }
+  
+  if (cruise_control_mode_ == CRUISE_CONTROL_OFF)
+  {
+    auto_navigation_mode_ = AUTO_NAVIGATION_OFF;
+  }
 }
 
 /***********************************************************************************************************************
   * Y Button
 ***********************************************************************************************************************/
-void Remote::updateAutoNavigationMode(void)
+void Remote::updatePlannerMode(void)
 {
   switch (current_interface_type_)
   {
@@ -271,12 +277,9 @@ void Remote::updateAutoNavigationMode(void)
       bool y_pressed = joypad_control_.buttons[JoypadButtonIndex::Y_BUTTON];
       if (y_pressed && debounce_y_)
       {    
-        int next_auto_navigation_mode = (static_cast<int>(auto_navigation_mode_)+1)%NUM_AUTO_NAVIGATION_MODES;
-        auto_navigation_mode_ = static_cast<AutoNavigationMode>(next_auto_navigation_mode);
+        int next_planner_mode = (static_cast<int>(planner_mode_)+1)%NUM_PLANNER_MODES;
+        planner_mode_ = static_cast<PlannerMode>(next_planner_mode);
         debounce_y_ = false;
-        desired_velocity_msg_.linear.x = 0.0;
-        desired_velocity_msg_.linear.y = 0.0;
-        desired_velocity_msg_.angular.z = 0.0;
       }  
       else if (!y_pressed)
       {
@@ -285,7 +288,7 @@ void Remote::updateAutoNavigationMode(void)
       break;
     }
     case (TABLET_JOY):
-      auto_navigation_mode_ = static_cast<AutoNavigationMode>(android_joy_control_.auto_navigation_mode.data);
+      //TODO //auto_navigation_mode_ = static_cast<PlannerMode>(android_joy_control_.planner_mode.data);
       break;
     case (TABLET_SENSOR):
       //TODO
@@ -991,6 +994,7 @@ void Remote::publishMessages(void)
   posing_mode_msg_.data = static_cast<int>(posing_mode_);
   cruise_control_mode_msg_.data = static_cast<int>(cruise_control_mode_);
   auto_navigation_mode_msg_.data = static_cast<int>(auto_navigation_mode_);
+  planner_mode_msg_.data = static_cast<int>(planner_mode_);
   primary_leg_selection_msg_.data = static_cast<int>(primary_leg_selection_);
   secondary_leg_selection_msg_.data = static_cast<int>(secondary_leg_selection_);
   primary_leg_state_msg_.data = static_cast<int>(primary_leg_state_);
@@ -1010,6 +1014,7 @@ void Remote::publishMessages(void)
   posing_mode_pub_.publish(posing_mode_msg_);
   cruise_control_pub_.publish(cruise_control_mode_msg_);
   auto_navigation_pub_.publish(auto_navigation_mode_msg_);    
+  planner_mode_pub_.publish(planner_mode_msg_);
   primary_leg_selection_pub_.publish(primary_leg_selection_msg_);
   secondary_leg_selection_pub_.publish(secondary_leg_selection_msg_);
   primary_leg_state_pub_.publish(primary_leg_state_msg_);
@@ -1125,8 +1130,10 @@ void Remote::androidSensorCallback(const syropod_remote::AndroidSensor::ConstPtr
 ***********************************************************************************************************************/ 
 void Remote::autoNavigationCallback(const geometry_msgs::Twist &twist)
 {
-  if (auto_navigation_mode_ == AUTO_NAVIGATION_ON)
+  if (cruise_control_mode_ == CRUISE_CONTROL_ON)
   {
+    auto_navigation_mode_ = AUTO_NAVIGATION_ON;
+    
     //Coordination frame remapping between autoNav and SHC
     desired_velocity_msg_.linear.x = twist.linear.x;
     desired_velocity_msg_.linear.y = twist.linear.y;
@@ -1174,7 +1181,7 @@ int main(int argc, char **argv)
       remote.updateRobotState();
       remote.updateGaitSelection();
       remote.updateCruiseControlMode();
-      remote.updateAutoNavigationMode();
+      remote.updatePlannerMode();
       remote.updatePosingMode();
       remote.updatePoseResetMode();
       remote.updateParameterAdjustment();

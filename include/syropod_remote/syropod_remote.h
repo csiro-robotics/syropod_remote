@@ -43,6 +43,7 @@
 #define NUM_PARAMETER_SELECTIONS 9
 #define NUM_LEG_STATES 2
 #define NUM_TIP_VELOCITY_INPUT_MODES 2
+#define NUM_PLANNER_MODES 2
 
 #define DEAD_ZONE 0.05
 
@@ -135,6 +136,12 @@ enum PoseResetMode
   ALL_RESET,
 };
 
+enum PlannerMode
+{
+  PLANNER_MODE_OFF,
+  PLANNER_MODE_ON,  
+};
+
 enum ParameterSelection
 {
   NO_PARAMETER_SELECTION,
@@ -220,7 +227,7 @@ public:
   void updateRobotState(void);
   void updateGaitSelection(void);
   void updateCruiseControlMode(void);
-  void updateAutoNavigationMode(void);
+  void updatePlannerMode(void);
   void updatePosingMode(void);
   void updatePoseResetMode(void);
   void updateParameterAdjustment(void);
@@ -269,6 +276,7 @@ private:
   ros::Publisher posing_mode_pub_;
   ros::Publisher cruise_control_pub_;
   ros::Publisher auto_navigation_pub_;
+  ros::Publisher planner_mode_pub_;
   ros::Publisher primary_leg_selection_pub_;
   ros::Publisher secondary_leg_selection_pub_;
   ros::Publisher primary_leg_state_pub_;
@@ -282,6 +290,7 @@ private:
   GaitDesignation gait_selection_ = GAIT_UNDESIGNATED;
   CruiseControlMode cruise_control_mode_ = CRUISE_CONTROL_OFF;
   AutoNavigationMode auto_navigation_mode_ = AUTO_NAVIGATION_OFF;
+  PlannerMode planner_mode_ = PLANNER_MODE_OFF;
   PosingMode posing_mode_ = NO_POSING;
   PoseResetMode pose_reset_mode_ = NO_RESET;
   LegSelection primary_leg_selection_ = LEG_UNDESIGNATED;
@@ -300,6 +309,7 @@ private:
   std_msgs::Int8 robot_state_msg_;
   std_msgs::Int8 gait_selection_msg_;
   std_msgs::Int8 cruise_control_mode_msg_;
+  std_msgs::Int8 planner_mode_msg_;
   std_msgs::Int8 auto_navigation_mode_msg_;
   std_msgs::Int8 posing_mode_msg_;
   std_msgs::Int8 pose_reset_mode_msg_;
