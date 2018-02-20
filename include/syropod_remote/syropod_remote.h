@@ -301,6 +301,7 @@ private:
   TipVelocityInputMode primary_tip_velocity_input_mode_ = XY_MODE;
   TipVelocityInputMode secondary_tip_velocity_input_mode_ = XY_MODE;
   
+  geometry_msgs::Twist auto_navigation_velocity_msg_;
   geometry_msgs::Twist desired_velocity_msg_;
   geometry_msgs::Twist desired_pose_msg_; 
   geometry_msgs::Point primary_tip_velocity_msg_;

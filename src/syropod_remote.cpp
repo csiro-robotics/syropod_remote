@@ -739,6 +739,10 @@ void Remote::updateDesiredVelocity(void)
       }
     }
   }
+  else
+  {
+    desired_velocity_msg_ = auto_navigation_velocity_msg_;
+  }
 }
 
 /***********************************************************************************************************************
@@ -1135,9 +1139,9 @@ void Remote::autoNavigationCallback(const geometry_msgs::Twist &twist)
     auto_navigation_mode_ = AUTO_NAVIGATION_ON;
     
     //Coordination frame remapping between autoNav and SHC
-    desired_velocity_msg_.linear.x = twist.linear.x;
-    desired_velocity_msg_.linear.y = twist.linear.y;
-    desired_velocity_msg_.angular.z = twist.angular.z;
+    auto_navigation_velocity_msg_.linear.x = twist.linear.x;
+    auto_navigation_velocity_msg_.linear.y = twist.linear.y;
+    auto_navigation_velocity_msg_.angular.z = twist.angular.z;
   }
 }
 
