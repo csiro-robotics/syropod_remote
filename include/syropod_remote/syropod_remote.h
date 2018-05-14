@@ -139,7 +139,7 @@ enum PoseResetMode
 enum PlannerMode
 {
   PLANNER_MODE_OFF,
-  PLANNER_MODE_ON,  
+  PLANNER_MODE_ON,
 };
 
 enum ParameterSelection
@@ -242,6 +242,7 @@ public:
   void updateSecondaryTipVelocity(void);
   
   void applyDeadZone(geometry_msgs::Point* axis);
+  void applyDeadZone(sensor_msgs::Joy* joy);
   
   void resetMessages(void);
   void publishMessages(void);

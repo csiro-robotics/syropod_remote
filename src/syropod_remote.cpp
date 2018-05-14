@@ -1050,6 +1050,33 @@ void Remote::applyDeadZone(geometry_msgs::Point* axis)
 }
 
 /***********************************************************************************************************************
+  * Apply dead zone to joystick input axes
+***********************************************************************************************************************/
+void Remote::applyDeadZone(sensor_msgs::Joy* joy)
+{
+  double primary_x = joy->axes[PRIMARY_X];
+  double primary_y = joy->axes[PRIMARY_Y];
+  double secondary_x = joy->axes[SECONDARY_X];
+  double secondary_y = joy->axes[SECONDARY_Y];
+  double primary_magnitude = sqrt((primary_x * primary_x) + (primary_y * primary_y));
+  double secondary_magnitude = sqrt((secondary_x * secondary_x) + (secondary_y * secondary_y));
+  double primary_x_norm = primary_x / primary_magnitude;
+  double secondary_x_norm = secondary_x / secondary_magnitude;
+  double primary_y_norm = primary_y / primary_magnitude;
+  double secondary_y_norm = secondary_y / secondary_magnitude;
+  double adjusted_primary_x = primary_x_norm * ((primary_magnitude - DEAD_ZONE) / (1 - DEAD_ZONE));
+  double adjusted_primary_y = primary_y_norm * ((primary_magnitude - DEAD_ZONE) / (1 - DEAD_ZONE));
+  double adjusted_secondary_x = secondary_x_norm * ((secondary_magnitude - DEAD_ZONE) / (1 - DEAD_ZONE));
+  double adjusted_secondary_y = secondary_y_norm * ((secondary_magnitude - DEAD_ZONE) / (1 - DEAD_ZONE));
+  bool primary_dead_zone = primary_magnitude < DEAD_ZONE;
+  bool secondary_dead_zone = secondary_magnitude < DEAD_ZONE;
+  joy->axes[PRIMARY_X] = primary_dead_zone ? 0.0 : adjusted_primary_x;
+  joy->axes[PRIMARY_Y] = primary_dead_zone ? 0.0 : adjusted_primary_y;
+  joy->axes[SECONDARY_X] = secondary_dead_zone ? 0.0 : adjusted_secondary_x;
+  joy->axes[SECONDARY_Y] = secondary_dead_zone ? 0.0 : adjusted_secondary_y;
+}
+
+/***********************************************************************************************************************
   * Joy callback
 ***********************************************************************************************************************/
 void Remote::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
@@ -1057,7 +1084,9 @@ void Remote::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
   current_priority_interface_ = "joy";
   current_interface_type_ = JOYPAD;
   priority_interface_overridden_ = true;
-  joypad_control_ = *joy;
+  sensor_msgs::Joy joy_dead_zoned = *joy;
+  applyDeadZone(&joy_dead_zoned);
+  joypad_control_ = joy_dead_zoned;
 }
 
 /***********************************************************************************************************************
@@ -1172,7 +1201,7 @@ int main(int argc, char **argv)
   while(ros::ok())
   {
     remote.resetMessages();
-    
+
     // Check joypad inputs
     remote.updateSystemState();
     if (remote.getSystemState() == SUSPENDED)
@@ -1199,9 +1228,9 @@ int main(int argc, char **argv)
       remote.updatePrimaryTipVelocity();
       remote.updateSecondaryTipVelocity();
     }
-    
+
     remote.publishMessages();
-    
+
     ros::spinOnce();
     loopRate.sleep();
   }
