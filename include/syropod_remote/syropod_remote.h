@@ -29,21 +29,13 @@
 #include <syropod_remote/AndroidSensor.h>
 #include <syropod_remote/AndroidJoy.h>
 
+#include <syropod_highlevel_controller/standard_includes.h>
+#include <syropod_highlevel_controller/parameters_and_states.h>
+
 #define NO_ROTATION 0.0
 #define ENABLE_ROTATION 1.0
 #define ROTATE_CLOCKWISE -1.0
 #define ROTATE_COUNTERCLOCKWISE 1.0
-
-#define NUM_SYSTEM_STATES 2
-#define NUM_ROBOT_STATES 3
-#define NUM_GAIT_SELECTIONS 4
-#define NUM_POSING_MODES 4
-#define NUM_CRUISE_CONTROL_MODES 2
-#define NUM_AUTO_NAVIGATION_MODES 2
-#define NUM_PARAMETER_SELECTIONS 9
-#define NUM_LEG_STATES 2
-#define NUM_TIP_VELOCITY_INPUT_MODES 2
-#define NUM_PLANNER_MODES 2
 
 #define DEAD_ZONE 0.05
 
@@ -83,129 +75,14 @@ enum InterfaceType
   UNASSIGNED = -1,
 };
 
-enum SystemState
-{
-  SUSPENDED,
-  OPERATIONAL,
-};
-
-enum RobotState 
-{
-  PACKED,
-  READY,
-  RUNNING,
-	UNKNOWN = -1,
-  OFF = -2,
-};
-
-enum GaitDesignation
-{
-  WAVE_GAIT,
-  AMBLE_GAIT,
-  RIPPLE_GAIT,
-  TRIPOD_GAIT,
-  GAIT_UNDESIGNATED = -1,
-};
-
-enum PosingMode
-{
-  NO_POSING,
-  X_Y_POSING,
-  PITCH_ROLL_POSING,
-  Z_YAW_POSING,
-};
-
-enum CruiseControlMode
-{
-  CRUISE_CONTROL_OFF,
-  CRUISE_CONTROL_ON,  
-};
-
-enum AutoNavigationMode
-{
-  AUTO_NAVIGATION_OFF,
-  AUTO_NAVIGATION_ON,  
-};
-
-enum PoseResetMode
-{
-  NO_RESET,
-  Z_YAW_RESET,
-  X_Y_RESET,
-  PITCH_ROLL_RESET,
-  ALL_RESET,
-};
-
-enum PlannerMode
-{
-  PLANNER_MODE_OFF,
-  PLANNER_MODE_ON,
-};
-
-enum ParameterSelection
-{
-  NO_PARAMETER_SELECTION,
-  STEP_FREQUENCY,
-  STEP_CLEARANCE,
-  BODY_CLEARANCE,
-  STANCE_SPAN_MODIFIER,
-  VIRTUAL_MASS,
-  VIRTUAL_STIFFNESS,
-  VIRTUAL_DAMPING,
-  FORCE_GAIN,
-};
-
-enum LegSelection
-{
-  LEG_0,
-  LEG_1,
-  LEG_2,
-  LEG_3,
-  LEG_4,
-  LEG_5,
-  LEG_6,
-  LEG_7,
-  LEG_UNDESIGNATED = -1,
-};
-
-enum LegState
-{
-  WALKING,
-  MANUAL,
-};
-
 enum TipVelocityInputMode
 {
   XY_MODE,
   ZY_MODE,
+  TIP_VELOCITY_INPUT_MODE_COUNT,
 };
 
-using namespace std;
-
-
-
-template <typename T>
-struct Parameter
-{
-public:
-  inline void init(ros::NodeHandle n, string name_input,
-                   string base_parameter_name = "/syropod_remote/",
-                   bool required_input = true)
-  {
-    name = name_input;
-    required = required_input;
-    initialised = n.getParam(base_parameter_name + name_input, data);
-    ROS_ERROR_COND(!initialised && required_input, "Error reading parameter/s %s from rosparam."
-                   " Check config file is loaded and type is correct\n", name.c_str());
-  }
-  
-  string name;              ///! Name of the parameter
-  T data;                   ///! Data which defines parameter
-  bool required = true;     ///! Denotes if this parameter is required to be initialised
-  bool initialised = false; ///! Denotes if this parameter has been initialised
-};
-
-struct Parameters 
+struct SyropodRemoteParameters 
 {
   Parameter<int> publish_rate;
   Parameter<bool> invert_compass;
@@ -216,7 +93,7 @@ struct Parameters
 class Remote
 {
 public:
-  Remote(ros::NodeHandle n, Parameters* params);
+  Remote(void);
   
   inline SystemState getSystemState(void) { return system_state_; };
   inline void setLegCount(int count) { leg_count_ = count; };
@@ -251,11 +128,21 @@ public:
   void keyCallback(const sensor_msgs::Joy::ConstPtr& key);
   void androidJoyCallback(const syropod_remote::AndroidJoy::ConstPtr& control);
   void androidSensorCallback(const syropod_remote::AndroidSensor::ConstPtr& control);
-  void autoNavigationCallback(const geometry_msgs::Twist &twist);
+  
+  /**
+   * Body velocity data from external source
+   * @params[in] twist Input body velocity message data
+   */
+  void externalBodyVelocityCallback(const geometry_msgs::Twist &twist);
+  
+  /**
+   * Pose velocity data from external source
+   * @params[in] twist Input pose velocity message data
+   */
+  void externalPoseVelocityCallback(const geometry_msgs::Twist &twist);
 
 private:
-  ros::NodeHandle n_;
-  Parameters* params_;
+  SyropodRemoteParameters params_;
   sensor_msgs::Joy joypad_control_;
   syropod_remote::AndroidJoy android_joy_control_;
   syropod_remote::AndroidSensor android_sensor_control_;
@@ -265,6 +152,9 @@ private:
   ros::Subscriber joypad_sub_;
   ros::Subscriber keyboard_sub_;
   ros::Subscriber auto_navigation_sub_;
+  
+  ros::Subscriber external_body_velocity_pub_;
+  ros::Subscriber external_pose_velocity_pub_;
   
   ros::Publisher desired_velocity_pub_;
   ros::Publisher desired_pose_pub_;
@@ -290,21 +180,22 @@ private:
   RobotState robot_state_ = PACKED;
   GaitDesignation gait_selection_ = GAIT_UNDESIGNATED;
   CruiseControlMode cruise_control_mode_ = CRUISE_CONTROL_OFF;
-  AutoNavigationMode auto_navigation_mode_ = AUTO_NAVIGATION_OFF;
   PlannerMode planner_mode_ = PLANNER_MODE_OFF;
   PosingMode posing_mode_ = NO_POSING;
   PoseResetMode pose_reset_mode_ = NO_RESET;
-  LegSelection primary_leg_selection_ = LEG_UNDESIGNATED;
-  LegSelection secondary_leg_selection_ = LEG_UNDESIGNATED;
+  LegDesignation primary_leg_selection_ = LEG_UNDESIGNATED;
+  LegDesignation secondary_leg_selection_ = LEG_UNDESIGNATED;
   LegState primary_leg_state_ = WALKING;
   LegState secondary_leg_state_ = WALKING;
   ParameterSelection parameter_selection_ = NO_PARAMETER_SELECTION;
   TipVelocityInputMode primary_tip_velocity_input_mode_ = XY_MODE;
   TipVelocityInputMode secondary_tip_velocity_input_mode_ = XY_MODE;
   
-  geometry_msgs::Twist auto_navigation_velocity_msg_;
   geometry_msgs::Twist desired_velocity_msg_;
   geometry_msgs::Twist desired_pose_msg_; 
+  geometry_msgs::Twist external_body_velocity_msg_;
+  geometry_msgs::Twist external_pose_velocity_msg_;
+  
   geometry_msgs::Point primary_tip_velocity_msg_;
   geometry_msgs::Point secondary_tip_velocity_msg_;
   std_msgs::Int8 system_state_msg_;
