@@ -153,8 +153,8 @@ private:
   ros::Subscriber keyboard_sub_;
   ros::Subscriber auto_navigation_sub_;
   
-  ros::Subscriber external_body_velocity_pub_;
-  ros::Subscriber external_pose_velocity_pub_;
+  ros::Subscriber external_body_velocity_sub_;
+  ros::Subscriber external_pose_velocity_sub_;
   
   ros::Publisher desired_velocity_pub_;
   ros::Publisher desired_pose_pub_;

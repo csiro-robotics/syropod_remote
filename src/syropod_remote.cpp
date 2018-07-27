@@ -30,9 +30,9 @@ Remote::Remote(void)
   keyboard_sub_ = n.subscribe("key", 1, &Remote::keyCallback, this);
   
   // External body and pose velocity topics
-  external_body_velocity_pub_ = n.subscribe("syropod_remote/external_body_velocity", 1,
+  external_body_velocity_sub_ = n.subscribe("syropod_remote/external_body_velocity", 1,
                                             &Remote::externalBodyVelocityCallback, this);
-  external_pose_velocity_pub_ = n.subscribe("syropod_remote/external_pose_velocity", 1,
+  external_pose_velocity_sub_ = n.subscribe("syropod_remote/external_pose_velocity", 1,
                                             &Remote::externalPoseVelocityCallback, this);
 
   //Setup publishers 
