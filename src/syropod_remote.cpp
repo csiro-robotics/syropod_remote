@@ -119,10 +119,10 @@ void Remote::checkKonamiCode(void)
       }
       else if (konami_code_ == 10)
       {
-        Parameter<string> syropod_type;
+        Parameter<std::string> syropod_type;
         syropod_type.init("syropod_type", "/syropod/parameters/");
-        string syropod_package_name = syropod_type.data + "_syropod";
-        string command_string = "play " + ros::package::getPath(syropod_package_name) + "/.easter_egg.mp3 -q";
+        std::string syropod_package_name = syropod_type.data + "_syropod";
+        std::string command_string = "play " + ros::package::getPath(syropod_package_name) + "/.easter_egg.mp3 -q";
         system(command_string.c_str());
         konami_code_ = 0;
       }
@@ -653,31 +653,6 @@ void Remote::updateDesiredVelocity(void)
         {
           // Right Joystick control
           desired_velocity_msg_.angular.z = joypad_control_.axes[SECONDARY_X];
-          /* Trigger control
-          double corrected_primary_axis_z;
-          if (joypad_control_.axes[PRIMARY_Z] == 0.0 && primary_z_axis_corrected_)
-          {
-            corrected_primary_axis_z = 0.0;
-          }
-          else
-          {
-            corrected_primary_axis_z = -(joypad_control_.axes[PRIMARY_Z] - 1.0) / 2.0;
-            primary_z_axis_corrected_ = false;
-          }
-
-          double corrected_secondary_axis_z;
-          if (joypad_control_.axes[SECONDARY_Z] == 0.0 && secondary_z_axis_corrected_)
-          {
-            corrected_secondary_axis_z = 0.0;
-          }
-          else
-          {
-            corrected_secondary_axis_z = -(joypad_control_.axes[SECONDARY_Z] - 1.0) / 2.0;
-            secondary_z_axis_corrected_ = false;
-          }
-
-          desired_velocity_msg_.angular.z = corrected_primary_axis_z - corrected_secondary_axis_z;
-          */
           break;
         }
         case (TABLET_JOY):
@@ -1162,7 +1137,7 @@ int main(int argc, char **argv)
 
   Remote remote;
   
-  Parameter<vector<string>> leg_id_array;
+  Parameter<std::vector<std::string>> leg_id_array;
   leg_id_array.init("leg_id");
   remote.setLegCount(leg_id_array.data.size());
 

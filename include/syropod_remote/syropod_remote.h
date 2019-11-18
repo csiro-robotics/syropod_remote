@@ -137,10 +137,10 @@ public:
   /// Cycle posing mode to the press of B button.
   void updatePosingMode(void);
   
-  /// If no leg is currently selected, set pose reset mode depending on current posing mode instead to the press of R3 button.
+  /// If no leg is currently selected, set pose reset mode depending on current posing mode instead to the press of R3.
   void updatePoseResetMode(void);
 
-  /// Cycle parameter selection on left/right dpad press and increment/decrement selected parameter on up/down dpad press.
+  /// Cycle parameter selection on left/right dpad press and increment/decrement selected parameter on up/down dpad.
   void updateParameterAdjustment(void);
   
   /// Cycle primary leg selection to the press of Left Bumper (L1) button.
@@ -153,7 +153,7 @@ public:
   void updatePrimaryLegState(void);
 
   /// Cycle secondary leg state of the selected leg to the press of Right Joystick (R3) Button.
-  void updateSecondaryLegState(void);Debounce boolean for logitech button
+  void updateSecondaryLegState(void);
 
   /// Update desired velocity according to the input from the user interface.
   void updateDesiredVelocity(void);
@@ -171,11 +171,11 @@ public:
   void updateSecondaryTipVelocity(void);
   
   /// Apply dead zone to joystick input axis
-  /// @param[in] axis TBD
+  /// @param[in] axis Axis to apply deadbanding to.
   void applyDeadZone(geometry_msgs::Point* axis);
 
   /// Apply dead zone to joystick input axes.
-  /// @param[in] joy TBD
+  /// @param[in] joy Joy message with axes to apply deadbanding to.
   void applyDeadZone(sensor_msgs::Joy* joy);
   
   /// Reset messages to zero.
@@ -193,11 +193,11 @@ public:
   void keyCallback(const sensor_msgs::Joy::ConstPtr& key);
 
   /// Callback handling android virtual joypad control of syropod.
-  /// @param[in] control TBD
+  /// @param[in] control Touchpad joystick input data structure
   void androidJoyCallback(const syropod_remote::AndroidJoy::ConstPtr& control);
 
   /// Callback handling android imu sensor control of syropod.
-  /// @param[in] control TBD
+  /// @param[in] control Touchpad accelerometer input data structure
   void androidSensorCallback(const syropod_remote::AndroidSensor::ConstPtr& control);
   
   /// Body velocity data from external source.
@@ -209,16 +209,16 @@ public:
   void externalPoseVelocityCallback(const geometry_msgs::Twist &twist);
 
 private:
-  SyropodRemoteParameters params_;                        ///< Data structure containing configurable parameter values for the remote
-  sensor_msgs::Joy joypad_control_;                       ///< TBD
-  syropod_remote::AndroidJoy android_joy_control_;        ///< TBD
-  syropod_remote::AndroidSensor android_sensor_control_;  ///< TBD
+  SyropodRemoteParameters params_; ///< Data structure containing configurable parameter values for the remote
+  
+  sensor_msgs::Joy joypad_control_;                       ///< Joypad input data structure
+  syropod_remote::AndroidJoy android_joy_control_;        ///< Touchpad joystick input data structure
+  syropod_remote::AndroidSensor android_sensor_control_;  ///< Touchpad accelerometer input data structure
   
   ros::Subscriber android_sensor_sub_;             ///< Subscriber for topic "/android/sensor"
   ros::Subscriber android_joy_sub_;                ///< Subscriber for topic "/android/joy"
   ros::Subscriber joypad_sub_;                     ///< Subscriber for topic "/joy"
   ros::Subscriber keyboard_sub_;                   ///< Subscriber for topic "/key"
-  ros::Subscriber auto_navigation_sub_;            ///< TBD - This subscriber is not found in source
   
   ros::Subscriber external_body_velocity_sub_;     ///< Subscriber for topic "/syropod_remote/external_body_velocity"
   ros::Subscriber external_pose_velocity_sub_;     ///< Subscriber for topic "/syropod_remote/external_pose_velocity"
@@ -258,27 +258,27 @@ private:
   TipVelocityInputMode primary_tip_velocity_input_mode_ = XY_MODE;   ///< Current primary tip velocity input mode
   TipVelocityInputMode secondary_tip_velocity_input_mode_ = XY_MODE; ///< Current secondary tip velocity input mode
   
-  geometry_msgs::Twist desired_velocity_msg_;        ///< Message to be published on "/syropod_remote/desired_velocity"
-  geometry_msgs::Twist desired_pose_msg_;            ///< Message to be published on "/syropod_remote/desired_pose"
-  geometry_msgs::Twist external_body_velocity_msg_;  ///< Message to be published on "/syropod_remote/external_body_velocity"
-  geometry_msgs::Twist external_pose_velocity_msg_;  ///< Message to be published on "/syropod_remote/external_pose_velocity"
+  geometry_msgs::Twist desired_velocity_msg_;        ///< Message published on "/syropod_remote/desired_velocity"
+  geometry_msgs::Twist desired_pose_msg_;            ///< Message published on "/syropod_remote/desired_pose"
+  geometry_msgs::Twist external_body_velocity_msg_;  ///< Message published on "/syropod_remote/external_body_velocity"
+  geometry_msgs::Twist external_pose_velocity_msg_;  ///< Message published on "/syropod_remote/external_pose_velocity"
   
-  geometry_msgs::Point primary_tip_velocity_msg_;    ///< Message to be published on "/syropod_remote/primary_tip_velocity"
-  geometry_msgs::Point secondary_tip_velocity_msg_;  ///< Message to be published on "/syropod_remote/secondary_tip_velocity"
-  std_msgs::Int8 system_state_msg_;                  ///< Message to be published on "/syropod_remote/system_state"
-  std_msgs::Int8 robot_state_msg_;                   ///< Message to be published on "/syropod_remote/robot_state"
-  std_msgs::Int8 gait_selection_msg_;                ///< Message to be published on "/syropod_remote/gait_selection"
-  std_msgs::Int8 cruise_control_mode_msg_;           ///< Message to be published on "/syropod_remote/cruise_control_mode"
-  std_msgs::Int8 planner_mode_msg_;                  ///< Message to be published on "/syropod_remote/planner_mode"
-  std_msgs::Int8 auto_navigation_mode_msg_;          ///< Message to be published on "/syropod_remote/auto_navigation_mode"
-  std_msgs::Int8 posing_mode_msg_;                   ///< Message to be published on "/syropod_remote/posing_mode"
-  std_msgs::Int8 pose_reset_mode_msg_;               ///< Message to be published on "/syropod_remote/pose_Reset_mode"
-  std_msgs::Int8 primary_leg_selection_msg_;         ///< Message to be published on "/syropod_remote/primary_leg_selection"
-  std_msgs::Int8 secondary_leg_selection_msg_;       ///< Message to be published on "/syropod_remote/secondary_leg_selection"
-  std_msgs::Int8 primary_leg_state_msg_;             ///< Message to be published on "/syropod_remote/primary_leg_state"
-  std_msgs::Int8 secondary_leg_state_msg_;           ///< Message to be published on "/syropod_remote/secondary_leg_state"
-  std_msgs::Int8 parameter_selection_msg_;           ///< Message to be published on "/syropod_remote/parameter_Selection"
-  std_msgs::Int8 parameter_adjustment_msg_;          ///< Message to be published on "/syropod_remote/parameter_adjustment"
+  geometry_msgs::Point primary_tip_velocity_msg_;    ///< Message published on "/syropod_remote/primary_tip_velocity"
+  geometry_msgs::Point secondary_tip_velocity_msg_;  ///< Message published on "/syropod_remote/secondary_tip_velocity"
+  std_msgs::Int8 system_state_msg_;                  ///< Message published on "/syropod_remote/system_state"
+  std_msgs::Int8 robot_state_msg_;                   ///< Message published on "/syropod_remote/robot_state"
+  std_msgs::Int8 gait_selection_msg_;                ///< Message published on "/syropod_remote/gait_selection"
+  std_msgs::Int8 cruise_control_mode_msg_;           ///< Message published on "/syropod_remote/cruise_control_mode"
+  std_msgs::Int8 planner_mode_msg_;                  ///< Message published on "/syropod_remote/planner_mode"
+  std_msgs::Int8 auto_navigation_mode_msg_;          ///< Message published on "/syropod_remote/auto_navigation_mode"
+  std_msgs::Int8 posing_mode_msg_;                   ///< Message published on "/syropod_remote/posing_mode"
+  std_msgs::Int8 pose_reset_mode_msg_;               ///< Message published on "/syropod_remote/pose_Reset_mode"
+  std_msgs::Int8 primary_leg_selection_msg_;         ///< Message published on "/syropod_remote/primary_leg_selection"
+  std_msgs::Int8 secondary_leg_selection_msg_;       ///< Message published on "/syropod_remote/secondary_leg_selection"
+  std_msgs::Int8 primary_leg_state_msg_;             ///< Message published on "/syropod_remote/primary_leg_state"
+  std_msgs::Int8 secondary_leg_state_msg_;           ///< Message published on "/syropod_remote/secondary_leg_state"
+  std_msgs::Int8 parameter_selection_msg_;           ///< Message published on "/syropod_remote/parameter_Selection"
+  std_msgs::Int8 parameter_adjustment_msg_;          ///< Message published on "/syropod_remote/parameter_adjustment"
 
   // Debounce booleans for buttons
   bool debounce_logitech_ = true;          ///< Debounce boolean for logitech button
@@ -296,14 +296,11 @@ private:
 
   int leg_count_;                          ///< Number of legs in the robot
 
-  bool primary_z_axis_corrected_ = true;   ///< TBD - Only used in a commented code block
-  bool secondary_z_axis_corrected_ = true; ///< TBD - Only used in a commented code block
-
   int konami_code_ = 0;                    ///< Current konami code
   
-  string current_priority_interface_;      ///< Current priority interface for controlling the robot
-  string default_priority_interface_;      ///< Default priority interface for controlling the robot
-  bool priority_interface_overridden_ = false;         ///< Flag denoting whether the priority interface has been overridden
+  std::string current_priority_interface_;      ///< Current priority interface for controlling the robot
+  std::string default_priority_interface_;      ///< Default priority interface for controlling the robot
+  bool priority_interface_overridden_ = false;         ///< Flag denoting priority interface has been overridden
   InterfaceType current_interface_type_ = UNASSIGNED;  ///< Current interface type for controlling the robot
 };
 
