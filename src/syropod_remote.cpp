@@ -1,29 +1,20 @@
-/*******************************************************************************************************************//**
- *  @file    syropod_remote.cpp
- *  @brief   Source file for Syropod Remote node.
- *
- *  @author  Fletcher Talbot (fletcher.talbot@csiro.au)
- *  @date    June 2017
- *  @version 0.5.0
- *
- *  CSIRO Autonomous Systems Laboratory
- *  Queensland Centre for Advanced Technologies
- *  PO Box 883, Kenmore, QLD 4069, Australia
- *
- *  (c) Copyright CSIRO 2017
- *
- *  All rights reserved, no part of this program may be used
- *  without explicit permission of CSIRO
- *
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Copyright (c) 2019
+// Commonwealth Scientific and Industrial Research Organisation (CSIRO)
+// ABN 41 687 119 230
+//
+// Author: Fletcher Talbot
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "syropod_remote/syropod_remote.h"
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 Remote::Remote(void)
 {
   ros::NodeHandle n;
   
-  //Subscribe to control topic/s
+  // Subscribe to control topic/s
   android_sensor_sub_ = n.subscribe("android/sensor", 1, &Remote::androidSensorCallback, this);
   android_joy_sub_ = n.subscribe("android/joy", 1, &Remote::androidJoyCallback, this);
   joypad_sub_ = n.subscribe("joy", 1, &Remote::joyCallback, this);
@@ -35,13 +26,13 @@ Remote::Remote(void)
   external_pose_velocity_sub_ = n.subscribe("syropod_remote/external_pose_velocity", 1,
                                             &Remote::externalPoseVelocityCallback, this);
 
-  //Setup publishers 
+  // Setup publishers 
   desired_velocity_pub_ = n.advertise<geometry_msgs::Twist>("syropod_remote/desired_velocity",1);
   desired_pose_pub_ = n.advertise<geometry_msgs::Twist>("syropod_remote/desired_pose",1);
   primary_tip_velocity_pub_ = n.advertise<geometry_msgs::Point>("syropod_remote/primary_tip_velocity",1);
   secondary_tip_velocity_pub_ = n.advertise<geometry_msgs::Point>("syropod_remote/secondary_tip_velocity",1);
   
-  //Status publishers
+  // Status publishers
   system_state_pub_ = n.advertise<std_msgs::Int8>("syropod_remote/system_state", 1);
 	robot_state_pub_ = n.advertise<std_msgs::Int8>("syropod_remote/robot_state", 1);
   gait_selection_pub_ = n.advertise<std_msgs::Int8>("syropod_remote/gait_selection", 1);
@@ -57,16 +48,15 @@ Remote::Remote(void)
   parameter_adjustment_pub_ = n.advertise<std_msgs::Int8>("syropod_remote/parameter_adjustment", 1);
   pose_reset_pub_ = n.advertise<std_msgs::Int8>("syropod_remote/pose_reset_mode", 1);
   
-  //Get (or set defaults for) parameters for other operating variables
+  // Get (or set defaults for) parameters for other operating variables
   params_.imu_sensitivity.init("imu_sensitivity", "syropod_remote/");
   params_.publish_rate.init("publish_rate", "syropod_remote/");
   params_.invert_compass.init("invert_compass", "syropod_remote/");
   params_.invert_imu.init("invert_imu", "syropod_remote/");
 }
 
-/***********************************************************************************************************************
-  * Logitech button
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::updateSystemState(void)
 {
   switch (current_interface_type_)
@@ -91,16 +81,15 @@ void Remote::updateSystemState(void)
       system_state_ = static_cast<SystemState>(android_joy_control_.system_state.data);
       break;
     case (TABLET_SENSOR):
-      //TODO
+      // TODO
       break;
     default:
       break;
   }
 }
 
-/***********************************************************************************************************************
-  * Konami Code (Up, Up, Down, Down, Left, Right, Left, Right, B, A)
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::checkKonamiCode(void)
 {
   switch (current_interface_type_)
@@ -130,29 +119,28 @@ void Remote::checkKonamiCode(void)
       }
       else if (konami_code_ == 10)
       {
-        Parameter<string> syropod_type;
+        Parameter<std::string> syropod_type;
         syropod_type.init("syropod_type", "/syropod/parameters/");
-        string syropod_package_name = syropod_type.data + "_syropod";
-        string command_string = "play " + ros::package::getPath(syropod_package_name) + "/.easter_egg.mp3 -q";
+        std::string syropod_package_name = syropod_type.data + "_syropod";
+        std::string command_string = "play " + ros::package::getPath(syropod_package_name) + "/.easter_egg.mp3 -q";
         system(command_string.c_str());
         konami_code_ = 0;
       }
       break;
     }
     case (TABLET_JOY):
-      //TODO
+      // TODO
       break;
     case (TABLET_SENSOR):
-      //TODO
+      // TODO
       break;
     default:
       break;
   }
 }
 
-/***********************************************************************************************************************
-  * Start button
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::updateRobotState(void)
 {
   switch (current_interface_type_)
@@ -160,9 +148,9 @@ void Remote::updateRobotState(void)
     case (KEYBOARD):
     case (JOYPAD):
     {
-      //On Start button press, iterate system state forward
+      // On Start button press, iterate system state forward
       bool start_pressed = joypad_control_.buttons[START];
-      if (start_pressed && debounce_start_) //Start button
+      if (start_pressed && debounce_start_) // Start button
       {
         int next_robot_state = std::min((static_cast<int>(robot_state_) + 1), ROBOT_STATE_COUNT - 1);
         robot_state_ = static_cast<RobotState>(next_robot_state);
@@ -173,9 +161,9 @@ void Remote::updateRobotState(void)
         debounce_start_ = true;
       }
       
-      //On Back button press, iterate system state backward
+      // On Back button press, iterate system state backward
       bool back_pressed = joypad_control_.buttons[BACK];
-      if (back_pressed && debounce_back_) //Back button
+      if (back_pressed && debounce_back_) // Back button
       {
         int next_robot_state = std::max((static_cast<int>(robot_state_)-1), 0);
         robot_state_ = static_cast<RobotState>(next_robot_state);
@@ -198,9 +186,8 @@ void Remote::updateRobotState(void)
   }
 }
 
-/***********************************************************************************************************************
-  * A Button
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::updateGaitSelection(void)
 {
   switch (current_interface_type_)
@@ -208,7 +195,7 @@ void Remote::updateGaitSelection(void)
     case (KEYBOARD):
     case (JOYPAD):
     {
-      //Cycle gaits on A button press
+      // Cycle gaits on A button press
       bool a_pressed = joypad_control_.buttons[A_BUTTON];
       if (a_pressed && debounce_a_)
       {    
@@ -226,16 +213,15 @@ void Remote::updateGaitSelection(void)
       gait_selection_ = static_cast<GaitDesignation>(android_joy_control_.gait_selection.data);
       break;
     case (TABLET_SENSOR):
-      //TODO
+      // TODO
       break;
     default:
       break;
   }
 }
 
-/***********************************************************************************************************************
-  * X Button
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::updateCruiseControlMode(void)
 {
   switch (current_interface_type_)
@@ -243,7 +229,7 @@ void Remote::updateCruiseControlMode(void)
     case (KEYBOARD):
     case (JOYPAD):
     {
-      //Cycle cruise control mode on X button press
+      // Cycle cruise control mode on X button press
       bool x_pressed = joypad_control_.buttons[JoypadButtonIndex::X_BUTTON];
       if (x_pressed && debounce_x_)
       {
@@ -261,16 +247,15 @@ void Remote::updateCruiseControlMode(void)
       cruise_control_mode_ = static_cast<CruiseControlMode>(android_joy_control_.cruise_control_mode.data);
       break;
     case (TABLET_SENSOR):
-      //TODO
+      // TODO
       break;
     default:
       break;
   }
 }
 
-/***********************************************************************************************************************
-  * Y Button
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::updatePlannerMode(void)
 {
   switch (current_interface_type_)
@@ -278,7 +263,7 @@ void Remote::updatePlannerMode(void)
     case (KEYBOARD):
     case (JOYPAD):
     {
-      //Cycle auto navigation mode on Y button press
+      // Cycle auto navigation mode on Y button press
       bool y_pressed = joypad_control_.buttons[JoypadButtonIndex::Y_BUTTON];
       if (y_pressed && debounce_y_)
       {    
@@ -293,19 +278,18 @@ void Remote::updatePlannerMode(void)
       break;
     }
     case (TABLET_JOY):
-      //TODO //auto_navigation_mode_ = static_cast<PlannerMode>(android_joy_control_.planner_mode.data);
+      // TODO // auto_navigation_mode_ = static_cast<PlannerMode>(android_joy_control_.planner_mode.data);
       break;
     case (TABLET_SENSOR):
-      //TODO
+      // TODO
       break;
     default:
       break;
   }
 }
 
-/***********************************************************************************************************************
-  * B Button
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::updatePosingMode(void)
 {
   switch (current_interface_type_)
@@ -313,7 +297,7 @@ void Remote::updatePosingMode(void)
     case (KEYBOARD):
     case (JOYPAD):
     {
-      //Cycle posing mode on B button press
+      // Cycle posing mode on B button press
       bool b_pressed = joypad_control_.buttons[B_BUTTON];
       if (b_pressed && debounce_b_)
       {
@@ -342,9 +326,8 @@ void Remote::updatePosingMode(void)
   }
 }
 
-/***********************************************************************************************************************
-  * Pose Reset
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::updatePoseResetMode(void)
 {
   switch (current_interface_type_)
@@ -352,7 +335,7 @@ void Remote::updatePoseResetMode(void)
     case (KEYBOARD):
     case (JOYPAD):
     {
-      //On R3 button press, if no leg is currently selected, set pose reset mode depending on current posing mode instead
+      // On R3 button press, if no leg is currently selected, set pose reset mode depending on current posing mode instead
       bool right_joystick_pressed = joypad_control_.buttons[RIGHT_JOYSTICK];
       if (secondary_leg_selection_ == LEG_UNDESIGNATED)
       {
@@ -391,9 +374,8 @@ void Remote::updatePoseResetMode(void)
   }
 }
 
-/***********************************************************************************************************************
-  * D-Pad Buttons
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::updateParameterAdjustment(void)
 {
   switch (current_interface_type_)
@@ -401,10 +383,10 @@ void Remote::updateParameterAdjustment(void)
     case (KEYBOARD):
     case (JOYPAD):
     {
-      //Message with 1.0 or -1.0 to increment/decrement parameter
+      // Message with 1.0 or -1.0 to increment/decrement parameter
       parameter_adjustment_msg_.data = joypad_control_.axes[JoypadAxisIndex::DPAD_UP_DOWN]; 
       
-      //Cycle parameter selction on left/right dpad press
+      // Cycle parameter selction on left/right dpad press
       int dpad_left_right = joypad_control_.axes[JoypadAxisIndex::DPAD_LEFT_RIGHT];
       if (dpad_left_right && debounce_dpad_)
       {
@@ -424,18 +406,15 @@ void Remote::updateParameterAdjustment(void)
     }
     case (TABLET_JOY):
       parameter_selection_ = static_cast<ParameterSelection>(android_joy_control_.parameter_selection.data);
-      parameter_adjustment_msg_.data = android_joy_control_.parameter_adjustment.data; //Should be 0.0, 1.0 or -1.0
+      parameter_adjustment_msg_.data = android_joy_control_.parameter_adjustment.data; // Should be 0.0, 1.0 or -1.0
       break;
     default:
       break;
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-/***********************************************************************************************************************
-  * Left Bumper (L1) Button
-***********************************************************************************************************************/
 void Remote::updatePrimaryLegSelection(void)
 {
   switch (current_interface_type_)
@@ -443,7 +422,7 @@ void Remote::updatePrimaryLegSelection(void)
     case (KEYBOARD):
     case (JOYPAD):
     {
-      //Cycle primary leg selection on R1 button press (skip slection if already allocated to secondary)
+      // Cycle primary leg selection on L1 button press (skip slection if already allocated to secondary)
       bool left_bumper_pressed = joypad_control_.buttons[JoypadButtonIndex::LEFT_BUMPER];
       if (primary_leg_state_ == WALKING)
       {
@@ -475,16 +454,15 @@ void Remote::updatePrimaryLegSelection(void)
       primary_leg_selection_ = static_cast<LegDesignation>(android_joy_control_.primary_leg_selection.data);
       break;
     case (TABLET_SENSOR):
-      //TODO
+      // TODO
       break;
     default:
       break;
   }
 }
 
-/***********************************************************************************************************************
-  * Right Bumper (R1) Button
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::updateSecondaryLegSelection(void)
 {
   switch (current_interface_type_)
@@ -492,7 +470,7 @@ void Remote::updateSecondaryLegSelection(void)
     case (KEYBOARD):
     case (JOYPAD):
     {
-      //Cycle secondary leg selection on L1 button press (skip slection if already allocated to primary)
+      // Cycle secondary leg selection on R1 button press (skip slection if already allocated to primary)
       bool right_bumper_pressed = joypad_control_.buttons[JoypadButtonIndex::RIGHT_BUMPER];
       if (secondary_leg_state_ == WALKING)
       {
@@ -526,16 +504,15 @@ void Remote::updateSecondaryLegSelection(void)
       secondary_leg_selection_ = static_cast<LegDesignation>(android_joy_control_.secondary_leg_selection.data);
       break;
     case (TABLET_SENSOR):
-      //TODO
+      // TODO
       break;
     default:
       break;
   }
 }
 
-/***********************************************************************************************************************
-  * Left Joystick (L3) Buttons
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::updatePrimaryLegState(void)
 {
   switch (current_interface_type_)
@@ -543,7 +520,7 @@ void Remote::updatePrimaryLegState(void)
     case (KEYBOARD):
     case (JOYPAD):
     {
-      //On L3 button press, cycle primary leg state of selected leg
+      // On L3 button press, cycle primary leg state of selected leg
       bool left_joystick_pressed = joypad_control_.buttons[LEFT_JOYSTICK];
       if (primary_leg_selection_ != LEG_UNDESIGNATED)
       {
@@ -551,7 +528,7 @@ void Remote::updatePrimaryLegState(void)
         {
           int next_primary_leg_state = (static_cast<int>(primary_leg_state_) + 1) % LEG_STATE_COUNT;
           primary_leg_state_ = static_cast<LegState>(next_primary_leg_state);
-          //If 2nd leg selection same as 1st whilst 1st is toggling state, then iterate 2nd leg selection
+          // If 2nd leg selection same as 1st whilst 1st is toggling state, then iterate 2nd leg selection
           if (secondary_leg_selection_ == primary_leg_selection_) 
           {
             int nextSecondaryLegSelection = (static_cast<int>(primary_leg_selection_)+1)%(leg_count_);
@@ -570,16 +547,15 @@ void Remote::updatePrimaryLegState(void)
       primary_leg_state_ = static_cast<LegState>(android_joy_control_.primary_leg_state.data);
       break;
     case (TABLET_SENSOR):
-      //TODO
+      // TODO
       break;
     default:
       break;
   }
 }
 
-/***********************************************************************************************************************
-  * Right Joystick (R3) Button
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::updateSecondaryLegState(void)
 {  
   switch (current_interface_type_)
@@ -587,7 +563,7 @@ void Remote::updateSecondaryLegState(void)
     case (KEYBOARD):
     case (JOYPAD):
     {
-      //On R3 button press, cycle primary leg state of selected leg
+      // On R3 button press, cycle secondary leg state of selected leg
       bool right_joystick_pressed = joypad_control_.buttons[RIGHT_JOYSTICK];
       if (secondary_leg_selection_ != LEG_UNDESIGNATED)
       {
@@ -595,7 +571,7 @@ void Remote::updateSecondaryLegState(void)
         {
           int next_secondary_leg_state = (static_cast<int>(secondary_leg_state_) + 1) % LEG_STATE_COUNT;
           secondary_leg_state_ = static_cast<LegState>(next_secondary_leg_state);
-          //If 1st leg selection same as 2nd whilst 2ndst is toggling state, then iterate 1st leg selection
+          // If 1st leg selection same as 2nd whilst 2ndst is toggling state, then iterate 1st leg selection
           if (secondary_leg_selection_ == primary_leg_selection_) 
           {
             int nextPrimaryLegSelection = (static_cast<int>(secondary_leg_selection_)+1)%(leg_count_);
@@ -615,16 +591,15 @@ void Remote::updateSecondaryLegState(void)
       secondary_leg_state_ = static_cast<LegState>(android_joy_control_.secondary_leg_state.data);
       break;
     case (TABLET_SENSOR):
-      //TODO
+      // TODO
       break;
     default:
       break;
   }
 }
 
-/***********************************************************************************************************************
-  * Desired Velocity
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::updateDesiredVelocity(void)
 {
   if (cruise_control_mode_ != CRUISE_CONTROL_EXTERNAL)
@@ -643,13 +618,13 @@ void Remote::updateDesiredVelocity(void)
           desired_velocity_msg_.linear.x = android_joy_control_.primary_control_axis.y;
           desired_velocity_msg_.linear.y = android_joy_control_.primary_control_axis.x;
           break;
-        case (TABLET_SENSOR): //TODO Refactor
+        case (TABLET_SENSOR): // TODO Refactor
         {
-          //Logic regarding deciding syropod's moving(Walk Foward/Backward & Strafe Left/Right)
+          // Logic regarding deciding syropod's moving(Walk Foward/Backward & Strafe Left/Right)
           double s = params_.imu_sensitivity.data;
           desired_velocity_msg_.linear.y = round(android_sensor_control_.orientation.x/90.0 * s)/s;
           desired_velocity_msg_.linear.x = round(android_sensor_control_.orientation.y/90.0 * s)/s;
-          //Zero values exceeding limit
+          // Zero values exceeding limit
           if (abs(desired_velocity_msg_.linear.y) > 1.0)
           {
             desired_velocity_msg_.linear.y = 0;
@@ -678,53 +653,28 @@ void Remote::updateDesiredVelocity(void)
         {
           // Right Joystick control
           desired_velocity_msg_.angular.z = joypad_control_.axes[SECONDARY_X];
-          /* Trigger control
-          double corrected_primary_axis_z;
-          if (joypad_control_.axes[PRIMARY_Z] == 0.0 && primary_z_axis_corrected_)
-          {
-            corrected_primary_axis_z = 0.0;
-          }
-          else
-          {
-            corrected_primary_axis_z = -(joypad_control_.axes[PRIMARY_Z] - 1.0) / 2.0;
-            primary_z_axis_corrected_ = false;
-          }
-
-          double corrected_secondary_axis_z;
-          if (joypad_control_.axes[SECONDARY_Z] == 0.0 && secondary_z_axis_corrected_)
-          {
-            corrected_secondary_axis_z = 0.0;
-          }
-          else
-          {
-            corrected_secondary_axis_z = -(joypad_control_.axes[SECONDARY_Z] - 1.0) / 2.0;
-            secondary_z_axis_corrected_ = false;
-          }
-
-          desired_velocity_msg_.angular.z = corrected_primary_axis_z - corrected_secondary_axis_z;
-          */
           break;
         }
         case (TABLET_JOY):
           desired_velocity_msg_.angular.z = android_joy_control_.secondary_control_axis.x;
           break;
-        case (TABLET_SENSOR): //TODO Refactor
+        case (TABLET_SENSOR): // TODO Refactor
         {
-          //Logic regarding deciding syropod's moving(Walk Foward/Backward & Strafe Left/Right)
+          // Logic regarding deciding syropod's moving(Walk Foward/Backward & Strafe Left/Right)
           double sensitivity = params_.imu_sensitivity.data;
           double orientation_x = 0 + round(android_sensor_control_.orientation.x/90.0 * sensitivity)/sensitivity;
           double orientation_y = 0 + round(android_sensor_control_.orientation.y/90.0 * sensitivity)/sensitivity;
-          //Zero values exceeding limit
+          // Zero values exceeding limit
           if (abs(orientation_y) > 1.0)
           {
             orientation_y = 0;
           }
 
-          //Logic regarding deciding syropod's rotation 
+          // Logic regarding deciding syropod's rotation 
           double compass_inverter = (params_.invert_compass.data ? -1.0 : 1.0);
           double relative_compass = android_sensor_control_.relative_compass.data * compass_inverter;
 
-          //Rotate as required
+          // Rotate as required
           double rotate;
           if (relative_compass > 0.3 && (abs(orientation_x) + abs(orientation_y) < 0.3))
           {
@@ -752,9 +702,8 @@ void Remote::updateDesiredVelocity(void)
   }
 }
 
-/***********************************************************************************************************************
-  * Desired Velocity
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::updateDesiredPose(void)
 {
   if (secondary_leg_state_ == WALKING)
@@ -838,9 +787,8 @@ void Remote::updateDesiredPose(void)
   }
 }
 
-/***********************************************************************************************************************
-  * Tip Velocity Input Modes
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::updateTipVelocityModes(void)
 {
   if (primary_leg_state_ == MANUAL && current_interface_type_ == JOYPAD)
@@ -876,9 +824,8 @@ void Remote::updateTipVelocityModes(void)
   }
 }
 
-/***********************************************************************************************************************
-  * Primary Tip Velocity
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::updatePrimaryTipVelocity(void)
 {
   if (primary_leg_state_ == MANUAL) 
@@ -915,7 +862,7 @@ void Remote::updatePrimaryTipVelocity(void)
         break;
       }
       case (TABLET_SENSOR):
-        //TODO
+        // TODO
         break;
       default:
         break;
@@ -923,9 +870,8 @@ void Remote::updatePrimaryTipVelocity(void)
   }
 }
 
-/***********************************************************************************************************************
-  * Secondary Tip Velocity
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::updateSecondaryTipVelocity(void)
 {
   if (secondary_leg_state_ == MANUAL) 
@@ -962,7 +908,7 @@ void Remote::updateSecondaryTipVelocity(void)
         break;
       }
       case (TABLET_SENSOR):
-        //TODO
+        // TODO
         break;
       default:
         break;
@@ -970,12 +916,11 @@ void Remote::updateSecondaryTipVelocity(void)
   }
 }
 
-/***********************************************************************************************************************
-  * Reset Messages
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::resetMessages(void)
 {
-  //Init message values
+  // Init message values
 	desired_velocity_msg_.linear.x = 0.0;
 	desired_velocity_msg_.linear.y = 0.0;
 	desired_velocity_msg_.linear.z = 0.0;
@@ -998,12 +943,11 @@ void Remote::resetMessages(void)
   parameter_adjustment_msg_.data = 0.0;
 }
 
-/***********************************************************************************************************************
-  * Publish Messages
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::publishMessages(void)
 {
-  //Assign message values
+  // Assign message values
   system_state_msg_.data = static_cast<int>(system_state_);
   robot_state_msg_.data = static_cast<int>(robot_state_);
   gait_selection_msg_.data = static_cast<int>(gait_selection_);
@@ -1017,7 +961,7 @@ void Remote::publishMessages(void)
   parameter_selection_msg_.data = static_cast<int>(parameter_selection_);
   pose_reset_mode_msg_.data = static_cast<int>(pose_reset_mode_);
   
-  //Publish messages
+  // Publish messages
   system_state_pub_.publish(system_state_msg_);
   robot_state_pub_.publish(robot_state_msg_);
   desired_velocity_pub_.publish(desired_velocity_msg_);	
@@ -1040,9 +984,8 @@ void Remote::publishMessages(void)
   
 }
 
-/***********************************************************************************************************************
-  * Apply dead zone to joystick input axis
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::applyDeadZone(geometry_msgs::Point* axis)
 {
   double axis_magnitude = sqrt((axis->x * axis->x) + (axis->y * axis->y));
@@ -1060,9 +1003,8 @@ void Remote::applyDeadZone(geometry_msgs::Point* axis)
   }
 }
 
-/***********************************************************************************************************************
-  * Apply dead zone to joystick input axes
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::applyDeadZone(sensor_msgs::Joy* joy)
 {
   double primary_x = joy->axes[PRIMARY_X];
@@ -1087,9 +1029,8 @@ void Remote::applyDeadZone(sensor_msgs::Joy* joy)
   joy->axes[SECONDARY_Y] = secondary_dead_zone ? 0.0 : adjusted_secondary_y;
 }
 
-/***********************************************************************************************************************
-  * Joy callback
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
   current_priority_interface_ = "joy";
@@ -1100,20 +1041,18 @@ void Remote::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
   joypad_control_ = joy_dead_zoned;
 }
 
-/***********************************************************************************************************************
-  * Joy callback
-***********************************************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::keyCallback(const sensor_msgs::Joy::ConstPtr& key)
 {
   current_priority_interface_ = "key";
   current_interface_type_ = KEYBOARD;
   priority_interface_overridden_ = true;
-  joypad_control_ = *key; //TODO Implement keyboard_control object (if needed)
+  joypad_control_ = *key; // TODO Implement keyboard_control object (if needed)
 }
 
-/***********************************************************************************************************************
-  * Callback for android virtual joypad control of syropod
-***********************************************************************************************************************/ 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::androidJoyCallback(const syropod_remote::AndroidJoy::ConstPtr& control)
 {
   // Control turning off/on overiding default interface with this interface
@@ -1141,9 +1080,8 @@ void Remote::androidJoyCallback(const syropod_remote::AndroidJoy::ConstPtr& cont
   }
 }
 
-/***********************************************************************************************************************
-  * Callback for android imu sensor control of syropod
-***********************************************************************************************************************/ 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::androidSensorCallback(const syropod_remote::AndroidSensor::ConstPtr& control)
 {
   // Control turning off/on overiding default interface with this interface
@@ -1169,9 +1107,8 @@ void Remote::androidSensorCallback(const syropod_remote::AndroidSensor::ConstPtr
   }
 }
 
-/***********************************************************************************************************************
-  * Body velocity data from external source
-***********************************************************************************************************************/ 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::externalBodyVelocityCallback(const geometry_msgs::Twist &twist)
 {
   if (cruise_control_mode_ != CRUISE_CONTROL_OFF)
@@ -1181,9 +1118,8 @@ void Remote::externalBodyVelocityCallback(const geometry_msgs::Twist &twist)
   }
 }
 
-/***********************************************************************************************************************
-  * Body velocity data from external source
-***********************************************************************************************************************/ 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Remote::externalPoseVelocityCallback(const geometry_msgs::Twist &twist)
 {
   if (posing_mode_ == EXTERNAL_POSING)
@@ -1192,20 +1128,20 @@ void Remote::externalPoseVelocityCallback(const geometry_msgs::Twist &twist)
   }
 }
 
-/***********************************************************************************************************************
-  * Main
-***********************************************************************************************************************/ 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// Main loop. Checks for joypad inputs, updates and publishes the messages.
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "syropod_remote");
 
   Remote remote;
   
-  Parameter<vector<string>> leg_id_array;
+  Parameter<std::vector<std::string>> leg_id_array;
   leg_id_array.init("leg_id");
   remote.setLegCount(leg_id_array.data.size());
 
-  //Setup publish loop_rate 
+  // Setup publish loop_rate 
   Parameter<double> publish_rate;
   publish_rate.init("publish_rate", "syropod_remote/");
   ros::Rate loopRate(publish_rate.data);
@@ -1249,5 +1185,4 @@ int main(int argc, char **argv)
   return 0;
 }
 
-/***********************************************************************************************************************
-***********************************************************************************************************************/ 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
