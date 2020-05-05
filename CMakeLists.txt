@@ -110,7 +110,7 @@ catkin_package(
   CATKIN_DEPENDS roscpp roslib message_runtime std_msgs sensor_msgs geometry_msgs 
 #  DEPENDS system_lib
 )
-add_definitions(-DEIGEN3_SUPPORT -DDEBUG -std=c++11 -Wall -g -ggdb -O0 -fopenmp -fPIC)
+add_definitions(-DDEBUG -std=c++11 -Wall -g -ggdb -O0 -fopenmp -fPIC)
 
 ###########
 ## Build ##
@@ -122,7 +122,6 @@ add_definitions(-DEIGEN3_SUPPORT -DDEBUG -std=c++11 -Wall -g -ggdb -O0 -fopenmp 
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
-  /usr/include/eigen3
 )
 
 add_executable(syropod_remote src/syropod_remote.cpp)
