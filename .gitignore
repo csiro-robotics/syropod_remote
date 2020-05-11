@@ -40,9 +40,10 @@
 *.pyc
 *.idea
 *.sublime*
+*.kate-swp
+*.kdev*
+.kdev*/
+.vscode/
 
 # Others
 *~
-*.kate-swp
-*.kdev*
-
