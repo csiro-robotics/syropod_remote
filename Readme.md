@@ -2,7 +2,7 @@
 
 [![Syropod Banner](https://i.imgur.com/QyMTwG3.jpg "CSIRO Robotics")](https://research.csiro.au/robotics/)
 
-An interface between user input via Joypad/Keyboard/Tablet and the OpenSHC
+An interface between user input via Joypad/Keyboard/Tablet and OpenSHC.
 
 **Current version:** v0.5.0
 
