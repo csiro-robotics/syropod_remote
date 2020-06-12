@@ -2,13 +2,13 @@
 
 [![Syropod Banner](https://i.imgur.com/QyMTwG3.jpg "CSIRO Robotics")](https://research.csiro.au/robotics/)
 
-An interface between user input via Joypad/Keyboard/Tablet and the Syropod High-level Controller (SHC)
+An interface between user input via Joypad/Keyboard/Tablet and the OpenSHC
 
 **Current version:** v0.5.0
 
 ## Getting Started
 
-If you haven't looked at the tutorials for using Syropod Highlevel Controller, see [SHC Tutorials](https://github.com/csiro-robotics/shc_tutorials).
+If you haven't looked at the tutorials for using OpenSHC, see [OpenSHC Tutorials](https://github.com/csiro-robotics/shc_tutorials).
 
 ### Requirements
 
