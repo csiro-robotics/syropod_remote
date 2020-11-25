@@ -104,7 +104,7 @@ class Remote
 public:
   /// Contructor for remote object.
   Remote(void);
-  
+
   /// Accessor for system state.
   /// @return Current state of the system
   inline SystemState getSystemState(void) { return system_state_; };
@@ -115,34 +115,37 @@ public:
 
   /// Reset konami code to zero.
   inline void resetKonamiCode(void) { konami_code_ = 0; };
-  
+
   /// Update system state to the press of Logitech button.
   void updateSystemState(void);
-  
+
+  /// Update system deadman switches
+  void updateDeadmen(void);
+
   /// Check Konami Code (Up, Up, Down, Down, Left, Right, Left, Right, B, A).
   void checkKonamiCode(void);
-  
+
   /// Increment robot state to the press of Start button and decrement robot state to the press of back button.
   void updateRobotState(void);
-  
+
   /// Cycle gaits to the press of A button.
   void updateGaitSelection(void);
 
   /// Cycle cruise control mode to the press of X button.
   void updateCruiseControlMode(void);
-  
+
   /// Cycle auto navigation mode to the press of Y button.
   void updatePlannerMode(void);
 
   /// Cycle posing mode to the press of B button.
   void updatePosingMode(void);
-  
+
   /// If no leg is currently selected, set pose reset mode depending on current posing mode instead to the press of R3.
   void updatePoseResetMode(void);
 
   /// Cycle parameter selection on left/right dpad press and increment/decrement selected parameter on up/down dpad.
   void updateParameterAdjustment(void);
-  
+
   /// Cycle primary leg selection to the press of Left Bumper (L1) button.
   void updatePrimaryLegSelection(void);
 
@@ -169,7 +172,7 @@ public:
 
   /// Update secondary tip velocity according to the input from the user interface.
   void updateSecondaryTipVelocity(void);
-  
+
   /// Apply dead zone to joystick input axis
   /// @param[in] axis Axis to apply deadbanding to.
   void applyDeadZone(geometry_msgs::Point* axis);
@@ -177,13 +180,13 @@ public:
   /// Apply dead zone to joystick input axes.
   /// @param[in] joy Joy message with axes to apply deadbanding to.
   void applyDeadZone(sensor_msgs::Joy* joy);
-  
+
   /// Reset messages to zero.
   void resetMessages(void);
 
   /// Publish messages to the relevant topics.
   void publishMessages(void);
-  
+
   /// Callback handling joypad input.
   /// @param[in] joy Message input from the joystick on the topic "/joy"
   void joyCallback(const sensor_msgs::Joy::ConstPtr& joy);
@@ -199,37 +202,39 @@ public:
   /// Callback handling android imu sensor control of syropod.
   /// @param[in] control Touchpad accelerometer input data structure
   void androidSensorCallback(const syropod_remote::AndroidSensor::ConstPtr& control);
-  
+
   /// Body velocity data from external source.
   /// @param[in] twist Input body velocity message data
   void externalBodyVelocityCallback(const geometry_msgs::Twist &twist);
-  
+
   /// Pose velocity data from external source.
   /// @param[in] twist Input pose velocity message data
   void externalPoseVelocityCallback(const geometry_msgs::Twist &twist);
 
 private:
   SyropodRemoteParameters params_; ///< Data structure containing configurable parameter values for the remote
-  
+
   sensor_msgs::Joy joypad_control_;                       ///< Joypad input data structure
   syropod_remote::AndroidJoy android_joy_control_;        ///< Touchpad joystick input data structure
   syropod_remote::AndroidSensor android_sensor_control_;  ///< Touchpad accelerometer input data structure
-  
+
   ros::Subscriber android_sensor_sub_;             ///< Subscriber for topic "/android/sensor"
   ros::Subscriber android_joy_sub_;                ///< Subscriber for topic "/android/joy"
   ros::Subscriber joypad_sub_;                     ///< Subscriber for topic "/joy"
   ros::Subscriber keyboard_sub_;                   ///< Subscriber for topic "/key"
-  
+
   ros::Subscriber external_body_velocity_sub_;     ///< Subscriber for topic "/syropod_remote/external_body_velocity"
   ros::Subscriber external_pose_velocity_sub_;     ///< Subscriber for topic "/syropod_remote/external_pose_velocity"
-  
+
   ros::Publisher desired_velocity_pub_;            ///< Publisher for topic "/syropod_remote/desired_velocity"
   ros::Publisher desired_pose_pub_;                ///< Publisher for topic "/syropod_remote/desired_pose"
   ros::Publisher primary_tip_velocity_pub_;        ///< Publisher for topic "/syropod_remote/primary_tip_velocity"
   ros::Publisher secondary_tip_velocity_pub_;      ///< Publisher for topic "/syropod_remote/secondary_tip_velocity"
-  
+
   ros::Publisher system_state_pub_;                ///< Publisher for topic "/syropod_remote/system_state"
-	ros::Publisher robot_state_pub_;                 ///< Publisher for topic "/syropod_remote/robot_state"
+  ros::Publisher deadman_primary_pub_;             ///< Publisher for topic "/syropod_remote/deadman_primary"
+  ros::Publisher deadman_secondary_pub_;           ///< Publisher for topic "/syropod_remote/deadman_secondary"
+  ros::Publisher robot_state_pub_;                 ///< Publisher for topic "/syropod_remote/robot_state"
   ros::Publisher gait_selection_pub_;              ///< Publisher for topic "/syropod_remote/gait_selection"
   ros::Publisher posing_mode_pub_;                 ///< Publisher for topic "/syropod_remote/posing_mode"
   ros::Publisher cruise_control_pub_;              ///< Publisher for topic "/syropod_remote/cruise_control_mode"
@@ -241,8 +246,8 @@ private:
   ros::Publisher secondary_leg_state_pub_;         ///< Publisher for topic "/syropod_remote/secondary_leg_state"
   ros::Publisher parameter_selection_pub_;         ///< Publisher for topic "/syropod_remote/parameter_selection"
   ros::Publisher parameter_adjustment_pub_;        ///< Publisher for topic "/syropod_remote/parameter_adjustment"
-  ros::Publisher pose_reset_pub_;                  ///< Publisher for topic "/syropod_remote/pose_reset_mode" 
-  
+  ros::Publisher pose_reset_pub_;                  ///< Publisher for topic "/syropod_remote/pose_reset_mode"
+
   SystemState system_state_ = SUSPENDED;                             ///< Current state of the system
   RobotState robot_state_ = PACKED;                                  ///< Current state of the robot
   GaitDesignation gait_selection_ = GAIT_UNDESIGNATED;               ///< Current gait selection for the walk cycle
@@ -257,12 +262,12 @@ private:
   ParameterSelection parameter_selection_ = NO_PARAMETER_SELECTION;  ///< Currently selected adjustable parameter
   TipVelocityInputMode primary_tip_velocity_input_mode_ = XY_MODE;   ///< Current primary tip velocity input mode
   TipVelocityInputMode secondary_tip_velocity_input_mode_ = XY_MODE; ///< Current secondary tip velocity input mode
-  
+
   geometry_msgs::Twist desired_velocity_msg_;        ///< Message published on "/syropod_remote/desired_velocity"
   geometry_msgs::Twist desired_pose_msg_;            ///< Message published on "/syropod_remote/desired_pose"
   geometry_msgs::Twist external_body_velocity_msg_;  ///< Message published on "/syropod_remote/external_body_velocity"
   geometry_msgs::Twist external_pose_velocity_msg_;  ///< Message published on "/syropod_remote/external_pose_velocity"
-  
+
   geometry_msgs::Point primary_tip_velocity_msg_;    ///< Message published on "/syropod_remote/primary_tip_velocity"
   geometry_msgs::Point secondary_tip_velocity_msg_;  ///< Message published on "/syropod_remote/secondary_tip_velocity"
   std_msgs::Int8 system_state_msg_;                  ///< Message published on "/syropod_remote/system_state"
@@ -279,6 +284,8 @@ private:
   std_msgs::Int8 secondary_leg_state_msg_;           ///< Message published on "/syropod_remote/secondary_leg_state"
   std_msgs::Int8 parameter_selection_msg_;           ///< Message published on "/syropod_remote/parameter_Selection"
   std_msgs::Int8 parameter_adjustment_msg_;          ///< Message published on "/syropod_remote/parameter_adjustment"
+  std_msgs::Bool deadman_primary_msg_;               ///< Message published on "/syropod_remote/deadman_primary"
+  std_msgs::Bool deadman_secondary_msg_;             ///< Message published on "/syropod_remote/deadman_secondary"
 
   // Debounce booleans for buttons
   bool debounce_logitech_ = true;          ///< Debounce boolean for logitech button
@@ -297,11 +304,13 @@ private:
   int leg_count_;                          ///< Number of legs in the robot
 
   int konami_code_ = 0;                    ///< Current konami code
-  
+
   std::string current_priority_interface_;      ///< Current priority interface for controlling the robot
   std::string default_priority_interface_;      ///< Default priority interface for controlling the robot
   bool priority_interface_overridden_ = false;         ///< Flag denoting priority interface has been overridden
   InterfaceType current_interface_type_ = UNASSIGNED;  ///< Current interface type for controlling the robot
+  bool deadman_primary_ = false;                       ///< Current state of primary deadman switch
+  bool deadman_secondary_ = false;                     ///< Current state of secondary deadman switch
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
