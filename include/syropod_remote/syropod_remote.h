@@ -109,6 +109,10 @@ public:
   /// @return Current state of the system
   inline SystemState getSystemState(void) { return system_state_; };
 
+  /// Accessor for deadman state.
+  /// @return Flag denoting whether one or more deadman switches are active
+  inline bool getDeadman(void) { return deadman_primary_ || deadman_secondary_; }
+
   /// Modifier for leg count.
   /// @param[in] count The value to be set as the leg count
   inline void setLegCount(int count) { leg_count_ = count; };

@@ -1185,23 +1185,31 @@ int main(int argc, char **argv)
     // Check joypad inputs
     remote.updateSystemState();
     remote.updateDeadmen();
-    remote.updateDesiredVelocity();
-    remote.updateRobotState();
-    remote.updateGaitSelection();
-    remote.updateCruiseControlMode();
-    remote.updatePlannerMode();
-    remote.updatePosingMode();
-    remote.updatePoseResetMode();
-    remote.updateParameterAdjustment();
-    remote.updatePrimaryLegSelection();
-    remote.updateSecondaryLegSelection();
-    remote.updatePrimaryLegState();
-    remote.updateSecondaryLegState();
-    remote.updateDesiredPose();
-    remote.updateTipVelocityModes();
-    remote.updatePrimaryTipVelocity();
-    remote.updateSecondaryTipVelocity();
-    remote.getSystemState() == SUSPENDED ? remote.checkKonamiCode() : remote.resetKonamiCode();
+
+    if (remote.getSystemState() != SUSPENDED && remote.getDeadman())
+    {
+      remote.updateDesiredVelocity();
+      remote.updateRobotState();
+      remote.updateGaitSelection();
+      remote.updateCruiseControlMode();
+      remote.updatePlannerMode();
+      remote.updatePosingMode();
+      remote.updatePoseResetMode();
+      remote.updateParameterAdjustment();
+      remote.updatePrimaryLegSelection();
+      remote.updateSecondaryLegSelection();
+      remote.updatePrimaryLegState();
+      remote.updateSecondaryLegState();
+      remote.updateDesiredPose();
+      remote.updateTipVelocityModes();
+      remote.updatePrimaryTipVelocity();
+      remote.updateSecondaryTipVelocity();
+      remote.checkKonamiCode();
+    }
+    else
+    {
+      remote.resetKonamiCode();
+    }
 
     // Publish
     remote.publishMessages();
